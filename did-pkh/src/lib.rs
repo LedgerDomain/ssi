@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use chrono::prelude::*;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -49,13 +48,13 @@ fn resolution_error(err: &str) -> ResolutionResult {
 
 async fn resolve_tz(did: &str, account_address: String) -> ResolutionResult {
     if account_address.len() < 3 {
-        return resolution_error(&ERROR_INVALID_DID);
+        return resolution_error(ERROR_INVALID_DID);
     }
     let (vm_type, vm_type_iri) = match account_address.get(0..3) {
         Some("tz1") => ("Ed25519PublicKeyBLAKE2BDigestSize20Base58CheckEncoded2021", "https://w3id.org/security#Ed25519PublicKeyBLAKE2BDigestSize20Base58CheckEncoded2021"),
         Some("tz2") => ("EcdsaSecp256k1RecoveryMethod2020", "https://identity.foundation/EcdsaSecp256k1RecoverySignature2020#EcdsaSecp256k1RecoveryMethod2020"),
         Some("tz3") => ("P256PublicKeyBLAKE2BDigestSize20Base58CheckEncoded2021", "https://w3id.org/security#P256PublicKeyBLAKE2BDigestSize20Base58CheckEncoded2021"),
-        _ => return resolution_error(&ERROR_INVALID_DID),
+        _ => return resolution_error(ERROR_INVALID_DID),
     };
     let blockchain_account_id = BlockchainAccountId {
         account_address,
@@ -123,7 +122,7 @@ async fn resolve_tz(did: &str, account_address: String) -> ResolutionResult {
 
 async fn resolve_eth(did: &str, account_address: String) -> ResolutionResult {
     if !account_address.starts_with("0x") {
-        return resolution_error(&ERROR_INVALID_DID);
+        return resolution_error(ERROR_INVALID_DID);
     }
     let mut context = BTreeMap::new();
     context.insert(
@@ -193,7 +192,7 @@ async fn resolve_eth(did: &str, account_address: String) -> ResolutionResult {
 
 async fn resolve_celo(did: &str, account_address: String) -> ResolutionResult {
     if !account_address.starts_with("0x") {
-        return resolution_error(&ERROR_INVALID_DID);
+        return resolution_error(ERROR_INVALID_DID);
     }
     let mut context = BTreeMap::new();
     context.insert(
@@ -239,7 +238,7 @@ async fn resolve_celo(did: &str, account_address: String) -> ResolutionResult {
 
 async fn resolve_poly(did: &str, account_address: String) -> ResolutionResult {
     if !account_address.starts_with("0x") {
-        return resolution_error(&ERROR_INVALID_DID);
+        return resolution_error(ERROR_INVALID_DID);
     }
     let mut context = BTreeMap::new();
     context.insert(
@@ -286,10 +285,10 @@ async fn resolve_poly(did: &str, account_address: String) -> ResolutionResult {
 async fn resolve_sol(did: &str, account_address: String) -> ResolutionResult {
     let public_key_bytes = match bs58::decode(&account_address).into_vec() {
         Ok(bytes) => bytes,
-        Err(_) => return resolution_error(&ERROR_INVALID_DID),
+        Err(_) => return resolution_error(ERROR_INVALID_DID),
     };
     if public_key_bytes.len() != 32 {
-        return resolution_error(&ERROR_INVALID_DID);
+        return resolution_error(ERROR_INVALID_DID);
     }
     let mut context = BTreeMap::new();
     context.insert(
@@ -354,7 +353,7 @@ async fn resolve_sol(did: &str, account_address: String) -> ResolutionResult {
     let solvm = VerificationMethod::Map(VerificationMethodMap {
         id: solvm_url.to_string(),
         type_: "SolanaMethod2021".to_string(),
-        public_key_jwk: Some(pk_jwk.clone()),
+        public_key_jwk: Some(pk_jwk),
         controller: did.to_string(),
         blockchain_account_id: Some(blockchain_account_id.to_string()),
         ..Default::default()
@@ -380,8 +379,8 @@ async fn resolve_sol(did: &str, account_address: String) -> ResolutionResult {
 }
 
 async fn resolve_btc(did: &str, account_address: String) -> ResolutionResult {
-    if !account_address.starts_with("1") {
-        return resolution_error(&ERROR_INVALID_DID);
+    if !account_address.starts_with('1') {
+        return resolution_error(ERROR_INVALID_DID);
     };
     let blockchain_account_id = BlockchainAccountId {
         account_address,
@@ -426,8 +425,8 @@ async fn resolve_btc(did: &str, account_address: String) -> ResolutionResult {
 }
 
 async fn resolve_doge(did: &str, account_address: String) -> ResolutionResult {
-    if !account_address.starts_with("D") {
-        return resolution_error(&ERROR_INVALID_DID);
+    if !account_address.starts_with('D') {
+        return resolution_error(ERROR_INVALID_DID);
     }
     let mut context = BTreeMap::new();
     context.insert(
@@ -481,7 +480,7 @@ impl DIDResolver for DIDPKH {
     ) -> ResolutionResult {
         let (type_, data) = match did.splitn(4, ':').collect::<Vec<&str>>().as_slice() {
             ["did", "pkh", type_, data] => (type_.to_string(), data.to_string()),
-            _ => return resolution_error(&ERROR_INVALID_DID),
+            _ => return resolution_error(ERROR_INVALID_DID),
         };
 
         match &type_[..] {
@@ -492,7 +491,7 @@ impl DIDResolver for DIDPKH {
             "sol" => resolve_sol(did, data).await,
             "btc" => resolve_btc(did, data).await,
             "doge" => resolve_doge(did, data).await,
-            _ => resolution_error(&ERROR_INVALID_DID),
+            _ => resolution_error(ERROR_INVALID_DID),
         }
     }
 
@@ -513,7 +512,7 @@ fn generate_sol(jwk: &JWK) -> Option<String> {
 fn generate_btc(key: &JWK) -> Result<String, String> {
     let addr = ssi::ripemd::hash_public_key(key, 0x00)?;
     #[cfg(test)]
-    if !addr.starts_with("1") {
+    if !addr.starts_with('1') {
         return Err("Expected Bitcoin address".to_string());
     }
     Ok(addr)
@@ -522,7 +521,7 @@ fn generate_btc(key: &JWK) -> Result<String, String> {
 fn generate_doge(key: &JWK) -> Result<String, String> {
     let addr = ssi::ripemd::hash_public_key(key, 0x1e)?;
     #[cfg(test)]
-    if !addr.starts_with("D") {
+    if !addr.starts_with('D') {
         return Err("Expected Dogecoin address".to_string());
     }
     Ok(addr)
@@ -530,7 +529,7 @@ fn generate_doge(key: &JWK) -> Result<String, String> {
 
 impl DIDMethod for DIDPKH {
     fn name(&self) -> &'static str {
-        return "pkh";
+        "pkh"
     }
 
     fn generate(&self, source: &Source) -> Option<String> {
