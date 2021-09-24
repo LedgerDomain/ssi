@@ -11,8 +11,8 @@ use serde::{
     ser::SerializeTuple,
     Deserialize, Deserializer, Serialize, Serializer,
 };
-use zeroize::Zeroize;
 use std::fmt::Formatter;
+use zeroize::Zeroize;
 
 // This shows how the generators are created with nothing up my sleeve values
 // const PREHASH: &'static [u8] = b"To be, or not to be- that is the question:
@@ -133,20 +133,26 @@ impl<'de> Deserialize<'de> for BlsSecretKey {
                 write!(formatter, "a byte sequence")
             }
 
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error> where A: SeqAccess<'de> {
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
                 let mut arr = [0u8; 32];
                 for i in 0..arr.len() {
-                    arr[i] = seq.next_element()?.ok_or_else(|| serde::de::Error::invalid_length(i, &self))?;
+                    arr[i] = seq
+                        .next_element()?
+                        .ok_or_else(|| serde::de::Error::invalid_length(i, &self))?;
                 }
                 let mut cursor = std::io::Cursor::new(arr);
-                let value = Fr::deserialize(&mut cursor, true).map_err(|_| serde::de::Error::invalid_value(serde::de::Unexpected::Bytes(&arr), &self))?;
+                let value = Fr::deserialize(&mut cursor, true).map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Bytes(&arr), &self)
+                })?;
                 Ok(BlsSecretKey(value))
             }
         }
 
         deserializer.deserialize_tuple(32, SecretKeyVisitor)
     }
-
 }
 
 /// Generate a blinded BLS key pair where secret key `x` and blinding factor `r` in Fr
