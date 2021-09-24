@@ -51,16 +51,17 @@ pub struct DIDURL {
 }
 
 /// Path component for a [Relative DID URL](https://w3c.github.io/did-core/#relative-did-urls).
-/// Based on [RFC 3886 - Path syntax](https://tools.ietf.org/html/rfc3986#section-3.3) and
-/// [Relative reference](https://tools.ietf.org/html/rfc3986#section-4.2)
+/// Based on [RFC 3886 - Path syntax][rfc3986-3.3] and
+/// [Relative reference](https://tools.ietf.org/html/rfc3986#section-4.2).
+///
 /// [rfc3986-3.3]: https://tools.ietf.org/html/rfc3986#section-3.3
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum RelativeDIDURLPath {
-    /// `path-absolute` from [RFC 3986 - 3.3. Path][rfc3986-3.3]
+    /// `path-absolute` from [RFC 3986](https://tools.ietf.org/html/rfc3986#section-3.3)
     Absolute(String),
-    /// `path-noscheme` from [RFC 3986 - 3.3. Path][rfc3986-3.3]
+    /// `path-noscheme` from [RFC 3986](https://tools.ietf.org/html/rfc3986#section-3.3)
     NoScheme(String),
-    /// `path-empty` from [RFC 3986 - 3.3. Path][rfc3986-3.3]
+    /// `path-empty` from [RFC 3986](https://tools.ietf.org/html/rfc3986#section-3.3)
     Empty,
 }
 
@@ -75,7 +76,7 @@ pub struct RelativeDIDURL {
 }
 
 /// A [DID URL][DIDURL] without a fragment. Used for [Dereferencing the Primary
-/// Resource][dereference_primary_resource] in DID URL Dereferencing.
+/// Resource](https://w3c-ccg.github.io/did-resolution/#dereferencing-algorithm-primary) in DID URL Dereferencing.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]

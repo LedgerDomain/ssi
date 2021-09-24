@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use thiserror::Error;
 
-/// https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-10.md
+/// <https://github.com/ChainAgnostic/CAIPs/blob/master/CAIPs/caip-10.md>
 #[derive(Clone, PartialEq, Hash, Debug)]
 pub struct BlockchainAccountId {
     pub account_address: String,
