@@ -1,3 +1,5 @@
+//! This crate provides core functionality for Verifiable Credentials and Decentralized
+//! Identifiers.
 pub mod bbs;
 pub mod blakesig;
 pub mod caip10;
