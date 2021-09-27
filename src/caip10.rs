@@ -72,6 +72,20 @@ fn encode_ed25519(jwk: &JWK) -> Result<String, &'static str> {
 
 impl BlockchainAccountId {
     /// Check that a given public key corresponds to this account id.
+    ///
+    /// Many kinds of blockchain account ids are derivable from public keys, whether by encoding
+    /// a public key directly or by using the hash of the public key.
+    ///
+    /// # Supported account ids for public key verification
+    ///
+    /// This function supports the following patterns of account ids:
+    /// - `tezos:*:tz1*`
+    /// - `tezos:*:tz2*`
+    /// - `tezos:*:tz3*`
+    /// - `eip155:*` (requires `keccak-hash` crate feature)
+    /// - `solana:*`
+    /// - `bip122:000000000019d6689c085ae165831e93:1*` (requires `ripemd160` crate feature)
+    /// - `bip122:1a91e3dace36e2be3bf030a65679fe82:D*` (requires `ripemd160` crate feature)
     pub fn verify(&self, jwk: &JWK) -> Result<(), BlockchainAccountIdVerifyError> {
         let hash = match (
             self.chain_id.namespace.as_str(),
@@ -113,17 +127,29 @@ impl BlockchainAccountId {
 /// An error resulting from trying to [parse a CAIP-10 string][`BlockchainAccountId::from_str`].
 #[derive(Error, Debug)]
 pub enum BlockchainAccountIdParseError {
-    /// An characvter in the account
+    /// The `account_address` part contains a character outside the expected range.
     #[error("Unexpected character in account address: {0}")]
     AddressChar(char),
+    /// The `account_address` part is not a valid length.
     #[error("Account address bad length: {0}")]
     AddressLength(usize),
+    /// The `chain_id` part contains a character outside the expected range.
     #[error("Unexpected character in chain id: {0}")]
     ChainChar(char),
+    /// The `chain_id` part is not a valid length.
     #[error("Chain id bad length: {0}")]
     ChainLength(usize),
+    /// The separator between the `chain_id` and `account_address` part was not found.
+    ///
+    /// The separator is a colon (`:`) as of the [`2021-08-11` version of CAIP-10][modern]. In the
+    /// [previous ("legacy") version of CAIP-10][legacy], it was an at sign (`@`) (and the two
+    /// parts appeared in the reverse order).
+    ///
+    /// [modern]: https://github.com/ChainAgnostic/CAIPs/blob/9b72330f70f764d6f4435617867b7aec4e50c6db/CAIPs/caip-10.md
+    /// [legacy]: https://github.com/ChainAgnostic/CAIPs/blob/26af70a9598ae4f7274481ba0c25ee77f90a66a2/CAIPs/caip-10.md
     #[error("Missing separator between chain id and account address")]
     MissingSeparator,
+    /// The `chain_id` part could not be parsed.
     #[error("Chain id: {0}")]
     ChainId(#[from] ChainIdParseError),
 }
