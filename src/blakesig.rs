@@ -18,8 +18,9 @@ const TZ3_HASH: [u8; 3] = [0x06, 0xa1, 0xa4];
 /// Hash a public key to produce a Tezos address.
 ///
 /// The address format is a Base58Check-encoded hash of the public key bytes, with a prefix for the
-/// type of key. This is as described here: [Base58 prefix]. The prefixes in the resulting ASCII
-/// string are `tz1` for Ed25519, `tz2` for Secp256k1 (k256), and `tz3` fo Secp256r1 (p256).
+/// type of key. This is as described in Tezos's [Base58 prefix] documentation. The prefixes in the
+/// resulting ASCII string are `tz1` for Ed25519, `tz2` for Secp256k1 (k256), and `tz3` for
+/// Secp256r1 (p256).
 ///
 /// [Base58 prefix]: https://gitlab.com/tezos/tezos/blob/3ed1c460773466c565d43e1007f4b2d9348d90a7/scripts/b58_prefix/README.md
 pub fn hash_public_key(jwk: &JWK) -> Result<String, Error> {
