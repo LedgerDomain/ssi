@@ -1,5 +1,6 @@
-//! This module provides functionality for hashing public keys using [BLAKE2b][], for use as
-//! [Tezos] blockchain account identifiers.
+//! Hashing public keys using [BLAKE2b][]
+//!
+//! BLAKE2b is used to hash public keys to produce [Tezos] blockchain account identifiers.
 //!
 //! Functionality is also provided for serializing public keys as needed for Tezos addresses.
 //!

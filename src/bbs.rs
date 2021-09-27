@@ -1,4 +1,4 @@
-//! This module provides functionality for [BBS curves][] and [BBS+][] keypairs.
+//! [BBS curves][] and [BBS+][] keypairs
 //!
 //! [BBS curves]: https://datatracker.ietf.org/doc/html/draft-yonezawa-pairing-friendly-curves#section-4.2.2
 //! [BBS+]: https://mattrglobal.github.io/bbs-signatures-spec/
