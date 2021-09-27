@@ -1,3 +1,11 @@
+//! DER (Distinguished Encoding Rules) and ASN.1
+//!
+//! This module provides various cryptographic data structures and their [ASN.1] (de)serialization
+//! using [simple_asn1].
+//!
+//! [ASN.1]: https://www.iso.org/standard/81420.html "ISO/IEC 8825-1:2021"
+//! [simple_asn1]: https://crates.io/crates/simple_asn1
+//!
 // http://luca.ntop.org/Teaching/Appunti/asn1.html
 // https://tls.mbed.org/kb/cryptography/asn1-key-structures-in-der-and-pem
 // https://en.wikipedia.org/wiki/Distinguished_Encoding_Rules#BER_encoding
@@ -52,13 +60,24 @@ pub struct OtherPrimeInfo {
 }
 
 #[derive(Debug, Clone)]
+/// An integer value, for encoding in ASN.1 ([ITU X.690])
+///
+/// [ITU X.690]: https://www.itu.int/rec/T-REC-X.690-202102-I/en
 pub struct Integer(pub BigInt);
 
 #[derive(Debug, Clone)]
+/// An octetstring from ASN.1 ([ITU X.690])
+///
+/// [ITU X.690]: https://www.itu.int/rec/T-REC-X.690-202102-I/en
 pub struct OctetString(pub Vec<u8>);
 
 #[derive(Debug, Clone)]
 // TODO: support bitstrings not bytes-aligned
+/// A bitstring from ASN.1 ([ITU X.690])
+///
+/// Note: only byte-aligned bitstrings are supported.
+///
+/// [ITU X.690]: https://www.itu.int/rec/T-REC-X.690-202102-I/en
 pub struct BitString(pub Vec<u8>);
 
 impl ToASN1 for RSAPrivateKey {
