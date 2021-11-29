@@ -571,13 +571,21 @@ pub fn decode_jws_parts(
 
 /// Verify a JWS with detached payload. Returns the JWS header on success.
 pub fn detached_verify(jws: &str, payload_enc: &[u8], key: &JWK) -> Result<Header, Error> {
+    log::debug!("jws.rs detached_verify; jws: {}", jws);
+    log::debug!("jws.rs detached_verify; payload_enc: {:?}", payload_enc);
+    log::debug!("jws.rs detached_verify; key: {:#?}", key);
     let (header_b64, signature_b64) = crate::jws::split_detached_jws(jws)?;
+    log::debug!("jws.rs detached_verify; header_b64: {:#?}", header_b64);
+    log::debug!("jws.rs detached_verify; signature_b64: {:#?}", signature_b64);
     let DecodedJWS {
         header,
         signing_input,
         payload: _,
         signature,
     } = decode_jws_parts(header_b64, payload_enc, signature_b64)?;
+    log::debug!("jws.rs detached_verify; header: {:#?}", header);
+    log::debug!("jws.rs detached_verify; signing_input: {:?}", signing_input);
+    log::debug!("jws.rs detached_verify; signature: {:?}", signature);
     verify_bytes(header.algorithm, &signing_input, key, &signature)?;
     Ok(header)
 }

@@ -41,6 +41,10 @@ pub const EIP712SIG_V0_1: &str = include_str!("../eip712sig-v0.1.jsonld");
 pub const EIP712SIG_V1: &str = include_str!("../eip712sig-v1.jsonld");
 /// <https://identity.foundation/presentation-exchange/submission/v1>
 pub const PRESENTATION_SUBMISSION_V1: &str = include_str!("../presentation-submission.jsonld");
+/// <https://open-credentialing-initiative.github.io/oci/contexts/oci-v1.jsonld>
+pub const OPEN_CREDENTIALING_INITIATIVE_V1: &str = include_str!("../open-credentialing-initiative-v1.jsonld");
+/// <https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld>
+pub const VC_STATUS_2021_LDAP_V1: &str = include_str!("../vc-status-2021-ladp-v1.jsonld");
 
 pub const TZ_V2: &str = include_str!("../tz-2021-v2.jsonld");
 pub const TZVM_V1: &str = include_str!("../tzvm-2021-v1.jsonld");

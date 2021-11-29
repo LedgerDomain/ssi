@@ -446,19 +446,31 @@ async fn to_jws_payload(
     document: &(dyn LinkedDataDocument + Sync),
     proof: &Proof,
 ) -> Result<Vec<u8>, Error> {
+    log::debug!("ldp.rs to_jws_payload; document.to_value(): {:#?}", document.to_value());
     let sigopts_dataset = proof.to_dataset_for_signing(Some(document)).await?;
+    log::debug!("ldp.rs to_jws_payload; sigopts_dataset: {:#?}", sigopts_dataset);
     let doc_dataset = document.to_dataset_for_signing(None).await?;
+    log::debug!("ldp.rs to_jws_payload; doc_dataset: {:#?}", doc_dataset);
     let doc_dataset_normalized = urdna2015::normalize(&doc_dataset)?;
+    log::debug!("ldp.rs to_jws_payload; doc_dataset_normalized: {:#?}", doc_dataset_normalized);
     let doc_normalized = doc_dataset_normalized.to_nquads()?;
+    log::debug!("ldp.rs to_jws_payload; doc_normalized: {:#?}", doc_normalized);
+    log::debug!("ldp.rs to_jws_payload; doc_normalized:\n{}", doc_normalized);
     let sigopts_dataset_normalized = urdna2015::normalize(&sigopts_dataset)?;
+    log::debug!("ldp.rs to_jws_payload; sigopts_dataset_normalized: {:#?}", sigopts_dataset_normalized);
     let sigopts_normalized = sigopts_dataset_normalized.to_nquads()?;
+    log::debug!("ldp.rs to_jws_payload; sigopts_normalized: {:#?}", sigopts_normalized);
+    log::debug!("ldp.rs to_jws_payload; sigopts_normalized:\n{}", sigopts_normalized);
     let sigopts_digest = sha256(sigopts_normalized.as_bytes())?;
+    log::debug!("ldp.rs to_jws_payload; sigopts_digest: {:?}", sigopts_digest);
     let doc_digest = sha256(doc_normalized.as_bytes())?;
+    log::debug!("ldp.rs to_jws_payload; doc_digest: {:?}", doc_digest);
     let data = [
         sigopts_digest.as_ref().to_vec(),
         doc_digest.as_ref().to_vec(),
     ]
     .concat();
+    log::debug!("ldp.rs to_jws_payload; returning data: {:?}", data);
     Ok(data)
 }
 
@@ -603,13 +615,18 @@ async fn verify(
     document: &(dyn LinkedDataDocument + Sync),
     resolver: &dyn DIDResolver,
 ) -> Result<VerificationWarnings, Error> {
+    log::debug!("ldp.rs verify; proof: {:#?}", proof);
     let jws = proof.jws.as_ref().ok_or(Error::MissingProofSignature)?;
+    log::debug!("ldp.rs verify; jws: {:#?}", jws);
     let verification_method = proof
         .verification_method
         .as_ref()
         .ok_or(Error::MissingVerificationMethod)?;
+    log::debug!("ldp.rs verify; verification_method: {:#?}", verification_method);
     let key = resolve_key(verification_method, resolver).await?;
+    log::debug!("ldp.rs verify; key: {:?}", key);
     let message = to_jws_payload(document, proof).await?;
+    log::debug!("ldp.rs verify; message: {:?}", message);
     crate::jws::detached_verify(jws, &message, &key)?;
     Ok(Default::default())
 }
@@ -742,6 +759,7 @@ impl ProofSuite for Ed25519Signature2018 {
         document: &(dyn LinkedDataDocument + Sync),
         resolver: &dyn DIDResolver,
     ) -> Result<VerificationWarnings, Error> {
+        log::debug!("Ed25519Signature2018::verify;");
         verify(proof, document, resolver).await
     }
     async fn complete(

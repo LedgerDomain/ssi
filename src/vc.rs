@@ -1024,6 +1024,8 @@ impl Credential {
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
     ) -> VerificationResult {
+        log::debug!("Credential::verify_jwt; jwt: {:#?}", jwt);
+        log::debug!("Credential::verify_jwt; options_opt: {:#?}", options_opt);
         let (_vc, result) = Self::decode_verify_jwt(jwt, options_opt, resolver).await;
         result
     }
@@ -1033,6 +1035,8 @@ impl Credential {
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
     ) -> (Option<Self>, VerificationResult) {
+        log::debug!("Credential::decode_verify_jwt; jwt: {:#?}", jwt);
+        log::debug!("Credential::decode_verify_jwt; options_opt: {:#?}", options_opt);
         let checks = options_opt
             .as_ref()
             .and_then(|opts| opts.checks.clone())
@@ -1201,6 +1205,9 @@ impl Credential {
         jwt_params: Option<(&Header, &JWTClaims)>,
         resolver: &dyn DIDResolver,
     ) -> Result<(Vec<&Proof>, bool), String> {
+        log::debug!("Credential::filter_proofs; self: {:#?}", self);
+        log::debug!("Credential::filter_proofs; options: {:#?}", options);
+        log::debug!("Credential::filter_proofs; jwt_params: {:#?}", jwt_params);
         // Allow any of issuer's verification methods by default
         let mut options = options.unwrap_or_default();
         let allowed_vms = match options.verification_method.take() {
@@ -1222,22 +1229,32 @@ impl Credential {
                 }
             }
         };
+        log::debug!("Credential::filter_proofs; allowed_vms: {:#?}", allowed_vms);
         let matched_proofs = self
             .proof
             .iter()
             .flatten()
             .filter(|proof| proof.matches(&options, &allowed_vms))
             .collect();
+        log::debug!("Credential::filter_proofs; matched_proofs: {:#?}", matched_proofs);
         let matched_jwt = match jwt_params {
-            Some((header, claims)) => jwt_matches(
-                header,
-                claims,
-                &options,
-                &allowed_vms,
-                &ProofPurpose::AssertionMethod,
-            ),
-            None => false,
+            Some((header, claims)) => {
+                log::debug!("Credential::filter_proofs; jwt_params had header: {:#?}", header);
+                log::debug!("Credential::filter_proofs; jwt_params had claims: {:#?}", claims);
+                jwt_matches(
+                    header,
+                    claims,
+                    &options,
+                    &allowed_vms,
+                    &ProofPurpose::AssertionMethod,
+                )
+            }
+            None => {
+                log::debug!("Credential::filter_proofs; jwt_params was None; returning false");
+                false
+            }
         };
+        log::debug!("Credential::filter_proofs; matched_jwt: {:#?}", matched_jwt);
         Ok((matched_proofs, matched_jwt))
     }
 
@@ -1247,16 +1264,20 @@ impl Credential {
         options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
     ) -> VerificationResult {
+        log::debug!("Credential::verify; self: {:#?}", self);
+        log::debug!("Credential::verify; options: {:#?}", options);
         let checks = options
             .as_ref()
             .and_then(|opts| opts.checks.clone())
             .unwrap_or_default();
+        log::debug!("Credential::verify; checks: {:#?}", checks);
         let (proofs, _) = match self.filter_proofs(options, None, resolver).await {
             Ok(proofs) => proofs,
             Err(err) => {
                 return VerificationResult::error(&format!("Unable to filter proofs: {}", err));
             }
         };
+        log::debug!("Credential::verify; proofs: {:#?}", proofs);
         if proofs.is_empty() {
             return VerificationResult::error("No applicable proof");
             // TODO: say why, e.g. expired
@@ -1265,15 +1286,20 @@ impl Credential {
         // Try verifying each proof until one succeeds
         for proof in proofs {
             let mut result = proof.verify(self, resolver).await;
+            log::debug!("Credential::verify; looping on proofs; proof: {:#?}", proof);
+            log::debug!("Credential::verify; looping on proofs; result: {:#?}", result);
+            log::debug!("Credential::verify; looping on proofs; iterate loop");
             results.append(&mut result);
             if result.errors.is_empty() {
                 results.checks.push(Check::Proof);
                 break;
             };
         }
+        log::debug!("Credential::verify; checks: {:#?}", checks);
         if checks.contains(&Check::CredentialStatus) {
             results.append(&mut self.check_status(resolver).await);
         }
+        log::debug!("Credential::verify; results: {:#?}", results);
         results
     }
 
@@ -1315,6 +1341,7 @@ impl Credential {
 
     /// Check the credentials [status](https://www.w3.org/TR/vc-data-model/#status)
     pub async fn check_status(&self, resolver: &dyn DIDResolver) -> VerificationResult {
+        log::debug!("Credential::check_status; self: {:#?}", self);
         let status = match self.credential_status {
             Some(ref status) => status,
             None => return VerificationResult::error("Missing credentialStatus"),
@@ -1536,6 +1563,8 @@ impl Presentation {
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
     ) -> (Option<Self>, VerificationResult) {
+        log::debug!("Presentation::decode_verify_jwt; jwt: {:#?}", jwt);
+        log::debug!("Presentation::decode_verify_jwt; options_opt: {:#?}", options_opt);
         let checks = options_opt
             .as_ref()
             .and_then(|opts| opts.checks.clone())
@@ -1559,6 +1588,9 @@ impl Presentation {
                 );
             }
         };
+        log::debug!("Presentation::decode_verify_jwt; header_b64: {:#?}", header_b64);
+        log::debug!("Presentation::decode_verify_jwt; payload_enc: {:#?}", payload_enc);
+        log::debug!("Presentation::decode_verify_jwt; signature_b64: {:#?}", signature_b64);
         let crate::jws::DecodedJWS {
             header,
             signing_input,
@@ -1573,9 +1605,17 @@ impl Presentation {
                 );
             }
         };
+        log::debug!("Presentation::decode_verify_jwt; header: {:#?}", header);
+        log::debug!("Presentation::decode_verify_jwt; signing_input: {:?}", signing_input);
+        log::debug!("Presentation::decode_verify_jwt; payload: {:?}", payload);
+        log::debug!("Presentation::decode_verify_jwt; signature: {:?}", signature);
         let claims: JWTClaims = match serde_json::from_slice(&payload) {
-            Ok(claims) => claims,
+            Ok(claims) => {
+                log::debug!("Presentation::decode_verify_jwt; claims: {:#?}", claims);
+                claims
+            }
             Err(err) => {
+                log::debug!("Presentation::decode_verify_jwt; claims is None; returning");
                 return (
                     None,
                     VerificationResult::error(&format!("Unable to decode JWS claims: {}", err)),
@@ -1594,6 +1634,7 @@ impl Presentation {
                 );
             }
         };
+        log::debug!("Presentation::decode_verify_jwt; vp: {:#?}", vp);
         if let Err(err) = vp.validate_unsigned() {
             return (
                 None,
@@ -1724,31 +1765,39 @@ impl Presentation {
         jwt_params: Option<(&Header, &JWTClaims)>,
         resolver: &dyn DIDResolver,
     ) -> Result<(Vec<&Proof>, bool), String> {
+        log::debug!("Presentation::filter_proofs; self: {:#?}", self);
         // Allow any of holder's verification methods matching proof purpose by default
         let mut options = options.unwrap_or_else(|| LinkedDataProofOptions {
             proof_purpose: Some(ProofPurpose::Authentication),
             ..Default::default()
         });
+        log::debug!("Presentation::filter_proofs; options: {:#?}", options);
+        log::debug!("Presentation::filter_proofs; jwt_params: {:#?}", jwt_params);
         let allowed_vms = match options.verification_method.take() {
             Some(vm) => vec![vm.to_string()],
             None => {
                 if let Some(URI::String(ref holder)) = self.holder {
+                    log::debug!("Presentation::filter_proofs; holder: {:#?}", holder);
                     let proof_purpose = options
                         .proof_purpose
                         .clone()
                         .unwrap_or(ProofPurpose::Authentication);
+                    log::debug!("Presentation::filter_proofs; proof_purpose: {:#?}", proof_purpose);
                     get_verification_methods_for_purpose(holder, resolver, proof_purpose).await?
                 } else {
                     Vec::new()
                 }
             }
         };
+        log::debug!("Presentation::filter_proofs; allowed_vms: {:#?}", allowed_vms);
+        log::debug!("Presentation::filter_proofs; self.proof: {:#?}", self.proof);
         let matched_proofs = self
             .proof
             .iter()
             .flatten()
             .filter(|proof| proof.matches(&options, &allowed_vms))
             .collect();
+        log::debug!("Presentation::filter_proofs; matched_proofs: {:#?}", matched_proofs);
         let matched_jwt = match jwt_params {
             Some((header, claims)) => jwt_matches(
                 header,
@@ -1759,6 +1808,7 @@ impl Presentation {
             ),
             None => false,
         };
+        log::debug!("    matched_jwt: {:#?}", matched_jwt);
         Ok((matched_proofs, matched_jwt))
     }
 
@@ -1940,31 +1990,47 @@ impl Proof {
 
     #[allow(clippy::ptr_arg)]
     pub fn matches(&self, options: &LinkedDataProofOptions, allowed_vms: &Vec<String>) -> bool {
+        log::debug!("Proof::matches; options: {:#?}", options);
+        log::debug!("Proof::matches; allowed_vms: {:#?}", allowed_vms);
         if let Some(ref verification_method) = options.verification_method {
+            log::debug!("Proof::matches; HIPPO 1; verification_method: {:#?}", verification_method);
             assert_local!(
                 self.verification_method.as_ref() == Some(&verification_method.to_string())
             );
         }
         if let Some(vm) = self.verification_method.as_ref() {
+            log::debug!("Proof::matches; HIPPO 2; vm: {:#?}", vm);
             assert_local!(allowed_vms.contains(vm));
         }
         if let Some(created) = self.created {
+            log::debug!("Proof::matches; HIPPO 3a1; created: {:#?}", created);
+            log::debug!("Proof::matches; HIPPO 3a2; options.created.unwrap_or_else(now_ms): {:#?}", options.created.unwrap_or_else(now_ms));
             assert_local!(options.created.unwrap_or_else(now_ms) >= created);
         } else {
+            log::debug!("Proof::matches; HIPPO 3b");
             return false;
         }
         if let Some(ref challenge) = options.challenge {
+            log::debug!("Proof::matches; HIPPO 4a; self.challenge.as_ref(): {:?}", self.challenge.as_ref());
+            log::debug!("Proof::matches; HIPPO 4b; challenge: {:?}", challenge);
             assert_local!(self.challenge.as_ref() == Some(challenge));
         }
         if let Some(ref domain) = options.domain {
+            log::debug!("Proof::matches; HIPPO 5a; self.domain.as_ref(): {:?}", self.domain.as_ref());
+            log::debug!("Proof::matches; HIPPO 5b; domain: {:?}", domain);
             assert_local!(self.domain.as_ref() == Some(domain));
         }
         if let Some(ref proof_purpose) = options.proof_purpose {
+            log::debug!("Proof::matches; HIPPO 6a; self.proof_purpose.as_ref(): {:?}", self.proof_purpose.as_ref());
+            log::debug!("Proof::matches; HIPPO 6b; proof_purpose: {:?}", proof_purpose);
             assert_local!(self.proof_purpose.as_ref() == Some(proof_purpose));
         }
         if let Some(ref type_) = options.type_ {
+            log::debug!("Proof::matches; HIPPO 7a; self.type_: {:?}", self.type_);
+            log::debug!("Proof::matches; HIPPO 7b; type_: {:?}", type_);
             assert_local!(&self.type_ == type_);
         }
+        log::debug!("Proof::matches; HIPPO 8; returning true");
         true
     }
 
@@ -1973,6 +2039,7 @@ impl Proof {
         document: &(dyn LinkedDataDocument + Sync),
         resolver: &dyn DIDResolver,
     ) -> VerificationResult {
+        log::debug!("Proof::verify;");
         LinkedDataProofs::verify(self, document, resolver)
             .await
             .into()
@@ -1987,6 +2054,11 @@ fn jwt_matches(
     allowed_vms: &[String],
     expected_proof_purpose: &ProofPurpose,
 ) -> bool {
+    log::debug!("jwt_matches; header: {:#?}", header);
+    log::debug!("jwt_matches; claims: {:#?}", claims);
+    log::debug!("jwt_matches; options: {:#?}", options);
+    log::debug!("jwt_matches; allowed_vms: {:#?}", allowed_vms);
+    log::debug!("jwt_matches; expected_proof_purpose: {:#?}", expected_proof_purpose);
     let LinkedDataProofOptions {
         verification_method,
         proof_purpose,
@@ -1996,31 +2068,42 @@ fn jwt_matches(
         ..
     } = options;
     if let Some(ref vm) = verification_method {
+        log::debug!("jwt_matches; HIPPO 1a; header.key_id.as_ref(): {:#?}", header.key_id.as_ref());
+        log::debug!("jwt_matches; HIPPO 1b; vm: {:#?}", vm);
         assert_local!(header.key_id.as_ref() == Some(&vm.to_string()));
     }
     if let Some(kid) = header.key_id.as_ref() {
+        log::debug!("jwt_matches; HIPPO 2; kid: {:#?}", kid);
         assert_local!(allowed_vms.contains(kid));
     }
     if let Some(nbf) = claims.not_before {
         let nbf_date_time: LocalResult<DateTime<Utc>> = nbf.into();
         if let Some(time) = nbf_date_time.latest() {
+            log::debug!("jwt_matches; HIPPO 3a");
             assert_local!(created.unwrap_or_else(Utc::now) >= time);
         } else {
+            log::debug!("jwt_matches; HIPPO 3b");
             return false;
         }
     }
     if let Some(exp) = claims.expiration_time {
         let exp_date_time: LocalResult<DateTime<Utc>> = exp.into();
         if let Some(time) = exp_date_time.earliest() {
+            log::debug!("jwt_matches; HIPPO 4a");
             assert_local!(Utc::now() < time);
         } else {
+            log::debug!("jwt_matches; HIPPO 4b");
             return false;
         }
     }
     if let Some(ref challenge) = challenge {
+        log::debug!("jwt_matches; HIPPO 5a; claims.nonce.as_ref(): {:?}", claims.nonce.as_ref());
+        log::debug!("jwt_matches; HIPPO 5b; challenge: {:?}", challenge);
         assert_local!(claims.nonce.as_ref() == Some(challenge));
     }
     if let Some(ref aud) = claims.audience {
+        log::debug!("jwt_matches; HIPPO 6a; aud: {:?}", aud);
+        log::debug!("jwt_matches; HIPPO 6b; claims.audience: {:?}", claims.audience);
         // https://datatracker.ietf.org/doc/html/rfc7519#section-4.1.3
         //   Each principal intended to process the JWT MUST
         //   identify itself with a value in the audience claim.
@@ -2039,10 +2122,13 @@ fn jwt_matches(
         }
     }
     if let Some(ref proof_purpose) = proof_purpose {
+        log::debug!("jwt_matches; HIPPO 7a; proof_purpose: {:?}", proof_purpose);
+        log::debug!("jwt_matches; HIPPO 7b; expected_proof_purpose: {:?}", expected_proof_purpose);
         if proof_purpose != expected_proof_purpose {
             return false;
         }
     }
+    log::debug!("jwt_matches; returning true");
     // TODO: support more claim checking via additional LDP options
     true
 }
