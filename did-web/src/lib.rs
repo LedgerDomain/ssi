@@ -38,13 +38,20 @@ fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
         None => ".well-known".to_string(),
     };
     // Use http for localhost, for testing purposes.
-    let proto = if domain_name == "localhost" {
-        "http"
+    let (proto, port_suffix) = if domain_name == "localhost" {
+        (
+            "http",
+            match std::env::var("DID_WEB_LOCALHOST_PORT") {
+                Ok(did_web_localhost_port) => format!(":{}", did_web_localhost_port),
+                Err(_) => "".to_string()
+            }
+        )
     } else {
-        "https"
+        // No port suffix here
+        ("https", "".to_string())
     };
     #[allow(unused_mut)]
-    let mut url = format!("{}://{}/{}/did.json", proto, domain_name, path);
+    let mut url = format!("{}://{}{}/{}/did.json", proto, domain_name, port_suffix, path);
     #[cfg(test)]
     PROXY.with(|proxy| {
         if let Some(ref proxy) = *proxy.borrow() {
