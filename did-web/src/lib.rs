@@ -39,6 +39,7 @@ fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
     };
     // Use http for localhost, for testing purposes.
     log::debug!("did:web resolution; domain_name: {:#?}, DID_WEB_LOCALHOST_PORT: {:#?}", domain_name, std::env::var("DID_WEB_LOCALHOST_PORT").ok());
+    panic!("DIE!");
     let (proto, port_suffix) = if domain_name == "localhost" {
         (
             "http",
