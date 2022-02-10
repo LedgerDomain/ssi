@@ -26,6 +26,7 @@ sha = ["sha2", "k256/sha256"]
 example-http-issuer = []
 
 [dependencies]
+log = "0.4"
 json-ld = "0.4"
 # SAFETY: bbs and pairing-plus are set to specific versions due to a
 # dependency on internal struct representations using transmute in src/bbs.rs.
