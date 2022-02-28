@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use crate::did_resolve::DIDResolver;
 use crate::error::Error;
-use crate::jsonld::{json_to_dataset, StaticLoader};
+use crate::jsonld::{ContextLoader, json_to_dataset};
 use crate::jwk::{JWTKeys, JWK};
 use crate::jws::Header;
 use crate::ldp::{
@@ -239,6 +239,7 @@ pub trait CredentialStatus: Sync {
         &self,
         credential: &Credential,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult;
 }
 
@@ -1029,8 +1030,9 @@ impl Credential {
         jwt: &str,
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
-        let (_vc, result) = Self::decode_verify_jwt(jwt, options_opt, resolver).await;
+        let (_vc, result) = Self::decode_verify_jwt(jwt, options_opt, resolver, context_loader).await;
         result
     }
 
@@ -1038,6 +1040,7 @@ impl Credential {
         jwt: &str,
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> (Option<Self>, VerificationResult) {
         let checks = options_opt
             .as_ref()
@@ -1149,7 +1152,7 @@ impl Credential {
         }
         // Try verifying each proof until one succeeds
         for proof in proofs {
-            let mut result = proof.verify(&vc, resolver).await;
+            let mut result = proof.verify(&vc, resolver, context_loader).await;
             results.append(&mut result);
             if results.errors.is_empty() {
                 results.checks.push(Check::Proof);
@@ -1157,7 +1160,7 @@ impl Credential {
             };
         }
         if checks.contains(&Check::CredentialStatus) {
-            results.append(&mut vc.check_status(resolver).await);
+            results.append(&mut vc.check_status(resolver, context_loader).await);
         }
         (Some(vc), results)
     }
@@ -1260,6 +1263,7 @@ impl Credential {
         &self,
         options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
         let checks = options
             .as_ref()
@@ -1278,7 +1282,7 @@ impl Credential {
         let mut results = VerificationResult::new();
         // Try verifying each proof until one succeeds
         for proof in proofs {
-            let mut result = proof.verify(self, resolver).await;
+            let mut result = proof.verify(self, resolver, context_loader).await;
             results.append(&mut result);
             if result.errors.is_empty() {
                 results.checks.push(Check::Proof);
@@ -1286,7 +1290,7 @@ impl Credential {
             };
         }
         if checks.contains(&Check::CredentialStatus) {
-            results.append(&mut self.check_status(resolver).await);
+            results.append(&mut self.check_status(resolver, context_loader).await);
         }
         results
     }
@@ -1299,8 +1303,9 @@ impl Credential {
         jwk: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> Result<Proof, Error> {
-        LinkedDataProofs::sign(self, options, resolver, jwk, None).await
+        LinkedDataProofs::sign(self, options, resolver, context_loader, jwk, None).await
     }
 
     /// Prepare to generate a linked data proof. Returns the signing input for the caller to sign
@@ -1310,8 +1315,9 @@ impl Credential {
         public_key: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> Result<ProofPreparation, Error> {
-        LinkedDataProofs::prepare(self, options, resolver, public_key, None).await
+        LinkedDataProofs::prepare(self, options, resolver, context_loader, public_key, None).await
     }
 
     pub fn add_proof(&mut self, proof: Proof) {
@@ -1328,7 +1334,7 @@ impl Credential {
     }
 
     /// Check the credentials [status](https://www.w3.org/TR/vc-data-model/#status)
-    pub async fn check_status(&self, resolver: &dyn DIDResolver) -> VerificationResult {
+    pub async fn check_status(&self, resolver: &dyn DIDResolver, context_loader: &mut ContextLoader) -> VerificationResult {
         let status = match self.credential_status {
             Some(ref status) => status,
             None => return VerificationResult::error("Missing credentialStatus"),
@@ -1351,7 +1357,7 @@ impl Credential {
                 ))
             }
         };
-        let mut result = checkable_status.check(self, resolver).await;
+        let mut result = checkable_status.check(self, resolver, context_loader).await;
         if !result.errors.is_empty() {
             return result;
         }
@@ -1365,9 +1371,10 @@ impl CheckableStatus {
         &self,
         credential: &Credential,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
         match self {
-            Self::RevocationList2020Status(status) => status.check(credential, resolver).await,
+            Self::RevocationList2020Status(status) => status.check(credential, resolver, context_loader).await,
         }
     }
 }
@@ -1382,6 +1389,7 @@ impl LinkedDataDocument for Credential {
     async fn to_dataset_for_signing(
         &self,
         parent: Option<&(dyn LinkedDataDocument + Sync)>,
+        context_loader: &mut ContextLoader,
     ) -> Result<DataSet, Error> {
         let mut copy = self.clone();
         copy.proof = None;
@@ -1390,8 +1398,7 @@ impl LinkedDataDocument for Credential {
             Some(parent) => parent.get_contexts()?,
             None => None,
         };
-        let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        json_to_dataset(&json, more_contexts.as_ref(), false, None, context_loader).await
     }
 
     fn to_value(&self) -> Result<Value, Error> {
@@ -1549,6 +1556,7 @@ impl Presentation {
         jwt: &str,
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> (Option<Self>, VerificationResult) {
         let checks = options_opt
             .as_ref()
@@ -1670,7 +1678,7 @@ impl Presentation {
         }
         // Try verifying each proof until one succeeds
         for proof in proofs {
-            let mut result = proof.verify(&vp, resolver).await;
+            let mut result = proof.verify(&vp, resolver, context_loader).await;
             if result.errors.is_empty() {
                 result.checks.push(Check::Proof);
                 return (Some(vp), result);
@@ -1684,8 +1692,9 @@ impl Presentation {
         jwt: &str,
         options_opt: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
-        let (_vp, result) = Self::decode_verify_jwt(jwt, options_opt, resolver).await;
+        let (_vp, result) = Self::decode_verify_jwt(jwt, options_opt, resolver, context_loader).await;
         result
     }
 
@@ -1723,8 +1732,9 @@ impl Presentation {
         jwk: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> Result<Proof, Error> {
-        LinkedDataProofs::sign(self, options, resolver, jwk, None).await
+        LinkedDataProofs::sign(self, options, resolver, context_loader, jwk, None).await
     }
 
     pub fn add_proof(&mut self, proof: Proof) {
@@ -1789,6 +1799,7 @@ impl Presentation {
         &self,
         options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
         let checks = options
             .as_ref()
@@ -1813,7 +1824,7 @@ impl Presentation {
         let mut results = VerificationResult::new();
         // Try verifying each proof until one succeeds
         for proof in proofs {
-            let mut result = proof.verify(self, resolver).await;
+            let mut result = proof.verify(self, resolver, context_loader).await;
             if result.errors.is_empty() {
                 result.checks.push(Check::Proof);
                 return result;
@@ -1895,6 +1906,7 @@ impl LinkedDataDocument for Presentation {
     async fn to_dataset_for_signing(
         &self,
         parent: Option<&(dyn LinkedDataDocument + Sync)>,
+        context_loader: &mut ContextLoader,
     ) -> Result<DataSet, Error> {
         let mut copy = self.clone();
         copy.proof = None;
@@ -1903,8 +1915,7 @@ impl LinkedDataDocument for Presentation {
             Some(parent) => parent.get_contexts()?,
             None => None,
         };
-        let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        json_to_dataset(&json, more_contexts.as_ref(), false, None, context_loader).await
     }
 
     fn to_value(&self) -> Result<Value, Error> {
@@ -1994,8 +2005,9 @@ impl Proof {
         &self,
         document: &(dyn LinkedDataDocument + Sync),
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
-        LinkedDataProofs::verify(self, document, resolver)
+        LinkedDataProofs::verify(self, document, resolver, context_loader)
             .await
             .into()
     }
@@ -2079,6 +2091,7 @@ impl LinkedDataDocument for Proof {
     async fn to_dataset_for_signing(
         &self,
         parent: Option<&(dyn LinkedDataDocument + Sync)>,
+        context_loader: &mut ContextLoader,
     ) -> Result<DataSet, Error> {
         let mut copy = self.clone();
         copy.jws = None;
@@ -2088,9 +2101,8 @@ impl LinkedDataDocument for Proof {
             Some(parent) => parent.get_contexts()?,
             None => None,
         };
-        let mut loader = StaticLoader;
         let dataset =
-            json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await?;
+            json_to_dataset(&json, more_contexts.as_ref(), false, None, context_loader).await?;
         verify_proof_consistency(self, &dataset)?;
         Ok(dataset)
     }
@@ -2778,6 +2790,7 @@ _:c14n0 <https://w3id.org/security#verificationMethod> <https://example.org/foo/
             async fn to_dataset_for_signing(
                 &self,
                 _parent: Option<&(dyn LinkedDataDocument + Sync)>,
+                _context_loader: &mut ContextLoader,
             ) -> Result<DataSet, Error> {
                 Err(Error::NotImplemented)
             }
@@ -2787,7 +2800,7 @@ _:c14n0 <https://w3id.org/security#verificationMethod> <https://example.org/foo/
             }
         }
         let parent = ProofContexts(json!(["https://w3id.org/security/v1", DEFAULT_CONTEXT]));
-        let proof_dataset = proof.to_dataset_for_signing(Some(&parent)).await.unwrap();
+        let proof_dataset = proof.to_dataset_for_signing(Some(&parent), None).await.unwrap();
         let proof_dataset_normalized = urdna2015::normalize(&proof_dataset).unwrap();
         let proof_urdna2015 = proof_dataset_normalized.to_nquads().unwrap();
         eprintln!("proof:\n{}", proof_urdna2015);
@@ -2818,7 +2831,7 @@ _:c14n0 <https://w3id.org/security#verificationMethod> <https://example.org/foo/
 <http://example.com/credentials/4643> <https://www.w3.org/2018/credentials#issuer> <https://example.com/issuers/14> .
 "#;
         let vc: Credential = serde_json::from_str(credential_str).unwrap();
-        let credential_dataset = vc.to_dataset_for_signing(None).await.unwrap();
+        let credential_dataset = vc.to_dataset_for_signing(None, None).await.unwrap();
         let credential_dataset_normalized = urdna2015::normalize(&credential_dataset).unwrap();
         let credential_urdna2015 = credential_dataset_normalized.to_nquads().unwrap();
         eprintln!("credential:\n{}", credential_urdna2015);

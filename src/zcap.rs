@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 
 use crate::did_resolve::DIDResolver;
 use crate::error::Error;
-use crate::jsonld::{json_to_dataset, StaticLoader, SECURITY_V2_CONTEXT};
+use crate::jsonld::{ContextLoader, json_to_dataset, SECURITY_V2_CONTEXT};
 use crate::jwk::JWK;
 use crate::ldp::{LinkedDataDocument, LinkedDataProofs, ProofPreparation};
 use crate::one_or_many::OneOrMany;
@@ -79,11 +79,12 @@ where
         &self,
         _options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
         match &self.proof {
             None => VerificationResult::error("No applicable proof"),
             Some(proof) => {
-                let mut result = proof.verify(self, resolver).await;
+                let mut result = proof.verify(self, resolver, context_loader).await;
                 if proof.proof_purpose != Some(ProofPurpose::CapabilityDelegation) {
                     result.errors.push("Incorrect Proof Purpose".into());
                 };
@@ -150,6 +151,7 @@ where
         jwk: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
         capability_chain: &[&str],
     ) -> Result<Proof, Error> {
         let mut ps = Map::<String, Value>::new();
@@ -157,7 +159,7 @@ where
             "capabilityChain".into(),
             serde_json::to_value(capability_chain)?,
         );
-        LinkedDataProofs::sign(self, options, resolver, jwk, Some(ps)).await
+        LinkedDataProofs::sign(self, options, resolver, context_loader, jwk, Some(ps)).await
     }
 
     /// Prepare to generate a linked data proof. Returns the signing input for the caller to sign
@@ -167,6 +169,7 @@ where
         public_key: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
         capability_chain: &[&str],
     ) -> Result<ProofPreparation, Error> {
         let mut ps = Map::<String, Value>::new();
@@ -174,7 +177,7 @@ where
             "capabilityChain".into(),
             serde_json::to_value(capability_chain)?,
         );
-        LinkedDataProofs::prepare(self, options, resolver, public_key, Some(ps)).await
+        LinkedDataProofs::prepare(self, options, resolver, context_loader, public_key, Some(ps)).await
     }
 
     pub fn set_proof(self, proof: Proof) -> Self {
@@ -199,6 +202,7 @@ where
     async fn to_dataset_for_signing(
         &self,
         parent: Option<&(dyn LinkedDataDocument + Sync)>,
+        context_loader: &mut ContextLoader,
     ) -> Result<DataSet, Error> {
         let mut copy = self.clone();
         copy.proof = None;
@@ -207,8 +211,7 @@ where
             Some(parent) => parent.get_contexts()?,
             None => None,
         };
-        let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        json_to_dataset(&json, more_contexts.as_ref(), false, None, context_loader).await
     }
 
     fn to_value(&self) -> Result<Value, Error> {
@@ -260,6 +263,7 @@ where
         &self,
         options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
         // TODO make this a list for delegation chains
         target_capability: &Delegation<C, P>,
     ) -> VerificationResult
@@ -268,7 +272,7 @@ where
         P: Serialize + Send + Sync + Clone,
     {
         let mut result = target_capability.validate_invocation(self);
-        let mut r2 = self.verify_signature(options, resolver).await;
+        let mut r2 = self.verify_signature(options, resolver, context_loader).await;
         result.append(&mut r2);
         result
     }
@@ -277,11 +281,12 @@ where
         &self,
         _options: Option<LinkedDataProofOptions>,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
     ) -> VerificationResult {
         match &self.proof {
             None => VerificationResult::error("No applicable proof"),
             Some(proof) => {
-                let mut result = proof.verify(self, resolver).await;
+                let mut result = proof.verify(self, resolver, context_loader).await;
                 if proof.proof_purpose != Some(ProofPurpose::CapabilityInvocation) {
                     result.errors.push("Incorrect Proof Purpose".into());
                 };
@@ -299,11 +304,12 @@ where
         jwk: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
         target: &URI,
     ) -> Result<Proof, Error> {
         let mut ps = Map::<String, Value>::new();
         ps.insert("capability".into(), serde_json::to_value(target)?);
-        LinkedDataProofs::sign(self, options, resolver, jwk, Some(ps)).await
+        LinkedDataProofs::sign(self, options, resolver, context_loader, jwk, Some(ps)).await
     }
 
     /// Prepare to generate a linked data proof. Returns the signing input for the caller to sign
@@ -313,11 +319,12 @@ where
         public_key: &JWK,
         options: &LinkedDataProofOptions,
         resolver: &dyn DIDResolver,
+        context_loader: &mut ContextLoader,
         target: &URI,
     ) -> Result<ProofPreparation, Error> {
         let mut ps = Map::<String, Value>::new();
         ps.insert("capability".into(), serde_json::to_value(target)?);
-        LinkedDataProofs::prepare(self, options, resolver, public_key, Some(ps)).await
+        LinkedDataProofs::prepare(self, options, resolver, context_loader, public_key, Some(ps)).await
     }
 
     pub fn set_proof(self, proof: Proof) -> Self {
@@ -341,6 +348,7 @@ where
     async fn to_dataset_for_signing(
         &self,
         parent: Option<&(dyn LinkedDataDocument + Sync)>,
+        context_loader: &mut ContextLoader,
     ) -> Result<DataSet, Error> {
         let mut copy = self.clone();
         copy.proof = None;
@@ -349,8 +357,7 @@ where
             Some(parent) => parent.get_contexts()?,
             None => None,
         };
-        let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        json_to_dataset(&json, more_contexts.as_ref(), false, None, context_loader).await
     }
 
     fn to_value(&self) -> Result<Value, Error> {

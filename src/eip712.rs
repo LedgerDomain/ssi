@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use thiserror::Error;
 
+use crate::jsonld::ContextLoader;
 use crate::keccak_hash::bytes_to_lowerhex;
 use crate::ldp::LinkedDataDocument;
 use crate::vc::Proof;
@@ -678,9 +679,10 @@ impl TypedData {
     pub async fn from_document_and_options(
         document: &(dyn LinkedDataDocument + Sync),
         proof: &Proof,
+        context_loader: &mut ContextLoader,
     ) -> Result<Self, TypedDataConstructionError> {
         let doc_dataset = document
-            .to_dataset_for_signing(None)
+            .to_dataset_for_signing(None, context_loader)
             .await
             .map_err(|e| TypedDataConstructionError::DocumentToDataset(e.to_string()))?;
         let doc_dataset_normalized = crate::urdna2015::normalize(&doc_dataset)
@@ -689,7 +691,7 @@ impl TypedData {
         #[allow(clippy::redundant_closure)]
         doc_statements_normalized.sort_by_cached_key(|x| String::from(x));
         let sigopts_dataset = proof
-            .to_dataset_for_signing(Some(document))
+            .to_dataset_for_signing(Some(document), context_loader)
             .await
             .map_err(|e| TypedDataConstructionError::ProofToDataset(e.to_string()))?;
         let sigopts_dataset_normalized = crate::urdna2015::normalize(&sigopts_dataset)
