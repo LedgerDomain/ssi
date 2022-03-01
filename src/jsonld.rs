@@ -342,9 +342,17 @@ impl Loader for StaticLoader {
     }
 }
 
+pub type ContextMap = HashMap<String, RemoteDocument<JsonValue>>;
+
 #[derive(Clone)]
 pub struct ContextLoader {
-    pub context_map: HashMap<String, RemoteDocument<JsonValue>>,
+    context_map: std::sync::Arc<async_std::sync::RwLock<ContextMap>>,
+}
+
+impl From<std::sync::Arc<async_std::sync::RwLock<ContextMap>>> for ContextLoader {
+    fn from(context_map: std::sync::Arc<async_std::sync::RwLock<ContextMap>>) -> Self {
+        Self { context_map }
+    }
 }
 
 impl Loader for ContextLoader {
@@ -356,6 +364,8 @@ impl Loader for ContextLoader {
         let url: IriBuf = url.into();
         async move {
             self.context_map
+                .read()
+                .await
                 .get(url.as_str())
                 .map(|rd| rd.clone())
                 .ok_or_else(|| {
@@ -368,9 +378,10 @@ impl Loader for ContextLoader {
 }
 
 lazy_static! {
-    pub static ref CONTEXT_LOADER: ContextLoader = ContextLoader {
-        context_map: {
-            let mut context_map = HashMap::new();
+    /// This is the built-in, default map of contexts.
+    pub static ref CONTEXT_MAP: std::sync::Arc<async_std::sync::RwLock<ContextMap>> =
+        std::sync::Arc::new(async_std::sync::RwLock::new({
+            let mut context_map = ContextMap::new();
             context_map.insert(CREDENTIALS_V1_CONTEXT.to_string(), CREDENTIALS_V1_CONTEXT_DOCUMENT.clone());
             context_map.insert(CREDENTIALS_EXAMPLES_V1_CONTEXT.to_string(), CREDENTIALS_EXAMPLES_V1_CONTEXT_DOCUMENT.clone());
             context_map.insert(ODRL_CONTEXT.to_string(), ODRL_CONTEXT_DOCUMENT.clone());
@@ -398,8 +409,9 @@ lazy_static! {
             context_map.insert(VDL_V1_CONTEXT.to_string(), VDL_V1_CONTEXT_DOCUMENT.clone());
             context_map.insert(WALLET_V1_CONTEXT.to_string(), WALLET_V1_CONTEXT_DOCUMENT.clone());
             context_map
-        },
-    };
+        }));
+    /// This is the built-in, default ContextLoader (it uses the built-in, default CONTEXT_MAP).
+    pub static ref CONTEXT_LOADER: ContextLoader = ContextLoader::from(CONTEXT_MAP.clone());
 }
 
 impl FromStr for RdfDirection {
