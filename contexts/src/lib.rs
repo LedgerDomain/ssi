@@ -47,6 +47,10 @@ pub const PRESENTATION_SUBMISSION_V1: &str = include_str!("../presentation-submi
 pub const VDL_V1: &str = include_str!("../w3id-vdl-v1.jsonld");
 /// <https://w3id.org/wallet/v1>
 pub const WALLET_V1: &str = include_str!("../w3id-wallet-v1.jsonld");
+/// <https://open-credentialing-initiative.github.io/oci/contexts/oci-v1.jsonld>
+pub const OPEN_CREDENTIALING_INITIATIVE_V1: &str = include_str!("../oci-v1.jsonld");
+/// <https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld>
+pub const VC_STATUS_2021_LDAP_V1: &str = include_str!("../vc-status-2021-ladp-v1.jsonld");
 
 pub const TZ_V2: &str = include_str!("../tz-2021-v2.jsonld");
 pub const TZVM_V1: &str = include_str!("../tzvm-2021-v1.jsonld");

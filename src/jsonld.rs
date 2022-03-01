@@ -142,6 +142,8 @@ pub const PRESENTATION_SUBMISSION_V1_CONTEXT: &str =
     "https://identity.foundation/presentation-exchange/submission/v1";
 pub const VDL_V1_CONTEXT: &str = "https://w3id.org/vdl/v1";
 pub const WALLET_V1_CONTEXT: &str = "https://w3id.org/wallet/v1";
+pub const OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/oci/contexts/oci-v1.jsonld";
+pub const VC_STATUS_2021_LDAP_V1_CONTEXT: &str = "https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld";
 
 lazy_static! {
     pub static ref CREDENTIALS_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
@@ -288,6 +290,18 @@ lazy_static! {
         let iri = Iri::new(WALLET_V1_CONTEXT).unwrap();
         RemoteDocument::new(doc, iri)
     };
+    pub static ref OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::OPEN_CREDENTIALING_INITIATIVE_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
+    pub static ref VC_STATUS_2021_LDAP_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::VC_STATUS_2021_LDAP_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(VC_STATUS_2021_LDAP_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
 }
 
 pub struct StaticLoader;
@@ -332,6 +346,12 @@ impl Loader for StaticLoader {
                 }
                 VDL_V1_CONTEXT => Ok(VDL_V1_CONTEXT_DOCUMENT.clone()),
                 WALLET_V1_CONTEXT => Ok(WALLET_V1_CONTEXT_DOCUMENT.clone()),
+                OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT => {
+                    Ok(OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT_DOCUMENT.clone())
+                }
+                VC_STATUS_2021_LDAP_V1_CONTEXT => {
+                    Ok(VC_STATUS_2021_LDAP_V1_CONTEXT_DOCUMENT.clone())
+                }
                 _ => {
                     eprintln!("unknown context {}", url);
                     Err(json_ld::ErrorCode::LoadingDocumentFailed.into())
@@ -397,6 +417,8 @@ lazy_static! {
             context_map.insert(PRESENTATION_SUBMISSION_V1_CONTEXT.to_string(), PRESENTATION_SUBMISSION_V1_CONTEXT_DOCUMENT.clone());
             context_map.insert(VDL_V1_CONTEXT.to_string(), VDL_V1_CONTEXT_DOCUMENT.clone());
             context_map.insert(WALLET_V1_CONTEXT.to_string(), WALLET_V1_CONTEXT_DOCUMENT.clone());
+            context_map.insert(OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT.to_string(), OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT_DOCUMENT.clone());
+            context_map.insert(VC_STATUS_2021_LDAP_V1_CONTEXT.to_string(), VC_STATUS_2021_LDAP_V1_CONTEXT_DOCUMENT.clone());
             context_map
         },
     };
