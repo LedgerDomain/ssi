@@ -47,6 +47,10 @@ pub const VDL_V1: &str = include_str!("../w3id-vdl-v1.jsonld");
 pub const OPEN_CREDENTIALING_INITIATIVE_V1: &str = include_str!("../oci-v1.jsonld");
 /// <https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld>
 pub const VC_STATUS_2021_LDAP_V1: &str = include_str!("../vc-status-2021-ladp-v1.jsonld");
+/// <https://open-credentialing-initiative.github.io/schemas/credentials/IdentityCredential-v1.0.0.jsonld>
+pub const OCI_IDENTITY_CREDENTIAL_V1: &str = include_str!("../IdentityCredential-v1.0.0.jsonld");
+/// <https://open-credentialing-initiative.github.io/schemas/credentials/DSCSAATPCredential-v1.0.0.jsonld>
+pub const OCI_DSCSA_ATP_CREDENTIAL_V1: &str = include_str!("../DSCSAATPCredential-v1.0.0.jsonld");
 
 pub const TZ_V2: &str = include_str!("../tz-2021-v2.jsonld");
 pub const TZVM_V1: &str = include_str!("../tzvm-2021-v1.jsonld");

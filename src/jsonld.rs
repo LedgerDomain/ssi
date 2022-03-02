@@ -141,6 +141,8 @@ pub const PRESENTATION_SUBMISSION_V1_CONTEXT: &str =
 pub const VDL_V1_CONTEXT: &str = "https://w3id.org/vdl/v1";
 pub const OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/oci/contexts/oci-v1.jsonld";
 pub const VC_STATUS_2021_LDAP_V1_CONTEXT: &str = "https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld";
+pub const OCI_IDENTITY_CREDENTIAL_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/schemas/credentials/IdentityCredential-v1.0.0.jsonld";
+pub const OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/schemas/credentials/DSCSAATPCredential-v1.0.0.jsonld";
 
 lazy_static! {
     pub static ref CREDENTIALS_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
@@ -293,6 +295,18 @@ lazy_static! {
         let iri = Iri::new(VC_STATUS_2021_LDAP_V1_CONTEXT).unwrap();
         RemoteDocument::new(doc, iri)
     };
+    pub static ref OCI_IDENTITY_CREDENTIAL_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::OCI_IDENTITY_CREDENTIAL_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(OCI_IDENTITY_CREDENTIAL_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
+    pub static ref OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::OCI_DSCSA_ATP_CREDENTIAL_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
 }
 
 pub struct StaticLoader;
@@ -341,6 +355,12 @@ impl Loader for StaticLoader {
                 }
                 VC_STATUS_2021_LDAP_V1_CONTEXT => {
                     Ok(VC_STATUS_2021_LDAP_V1_CONTEXT_DOCUMENT.clone())
+                }
+                OCI_IDENTITY_CREDENTIAL_V1_CONTEXT => {
+                    Ok(OCI_IDENTITY_CREDENTIAL_V1_CONTEXT_DOCUMENT.clone())
+                }
+                OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT => {
+                    Ok(OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT_DOCUMENT.clone())
                 }
                 _ => {
                     eprintln!("unknown context {}", url);
