@@ -287,6 +287,20 @@ pub struct Presentation {
     pub proof: Option<OneOrMany<Proof>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holder: Option<URI>,
+
+    /// If producing a JWT from Presentation, this sets the "iat" field.
+    /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwt_iat: Option<NumericDate>,
+    /// If producing a JWT from Presentation, this sets the "nbf" field.
+    /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwt_nbf: Option<NumericDate>,
+    /// If producing a JWT from Presentation, this sets the "exp" field.
+    /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jwt_exp: Option<NumericDate>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(flatten)]
     pub property_set: Option<Map<String, Value>>,
@@ -415,6 +429,9 @@ impl std::convert::Into<LocalResult<DateTime<Utc>>> for NumericDate {
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[non_exhaustive]
 pub struct JWTClaims {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "iat")]
+    pub issued_at: Option<NumericDate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "exp")]
     pub expiration_time: Option<NumericDate>,
@@ -1429,11 +1446,18 @@ impl Presentation {
     }
 
     pub fn to_jwt_claims(&self) -> Result<JWTClaims, Error> {
+        let issued_at = self.jwt_iat.clone();
+        let not_before = self.jwt_nbf.clone();
+        let expiration_time = self.jwt_exp.clone();
+        let id = self.id.clone();
+        let holder = self.holder.clone();
         let vp = self.clone();
-        let (id, holder) = (vp.id.clone(), vp.holder.clone());
         Ok(JWTClaims {
             issuer: holder.map(|id| id.into()),
             jwt_id: id.map(|id| id.into()),
+            issued_at,
+            not_before,
+            expiration_time,
             verifiable_presentation: Some(vp),
             ..Default::default()
         })
@@ -1811,6 +1835,9 @@ impl Default for Presentation {
             id: None,
             proof: None,
             holder: None,
+            jwt_iat: None,
+            jwt_nbf: None,
+            jwt_exp: None,
             property_set: None,
         }
     }
