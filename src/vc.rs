@@ -1394,7 +1394,10 @@ impl LinkedDataDocument for Credential {
             None => None,
         };
         let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        log::debug!("Credential::to_dataset_for_signing; json: {}", json);
+        let result = json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await;
+        log::debug!("Credential::to_dataset_for_signing; result: {:#?}", result);
+        result
     }
 
     fn to_value(&self) -> Result<Value, Error> {
@@ -1909,7 +1912,10 @@ impl LinkedDataDocument for Presentation {
             None => None,
         };
         let mut loader = StaticLoader;
-        json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await
+        log::debug!("Presentation::to_dataset_for_signing; json: {}", json);
+        let result = json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await;
+        log::debug!("Credential::to_dataset_for_signing; result: {:#?}", result);
+        result
     }
 
     fn to_value(&self) -> Result<Value, Error> {
@@ -2094,8 +2100,10 @@ impl LinkedDataDocument for Proof {
             None => None,
         };
         let mut loader = StaticLoader;
+        log::debug!("Proof::to_dataset_for_signing; json: {}", json);
         let dataset =
             json_to_dataset(&json, more_contexts.as_ref(), false, None, &mut loader).await?;
+        log::debug!("Proof::to_dataset_for_signing; dataset: {:#?}", dataset);
         verify_proof_consistency(self, &dataset)?;
         Ok(dataset)
     }
