@@ -306,17 +306,20 @@ pub struct Presentation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holder: Option<URI>,
 
-    /// If producing a JWT from Presentation, this sets the "iat" field.
+    /// If producing a JWT from Presentation, this sets the "iat" field of the JWT payload, and
+    /// notably does not go into the VP body itself.
     /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip)]
     pub jwt_iat: Option<NumericDate>,
-    /// If producing a JWT from Presentation, this sets the "nbf" field.
+    /// If producing a JWT from Presentation, this sets the "nbf" field of the JWT payload, and
+    /// notably does not go into the VP body itself.
     /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip)]
     pub jwt_nbf: Option<NumericDate>,
-    /// If producing a JWT from Presentation, this sets the "exp" field.
+    /// If producing a JWT from Presentation, this sets the "exp" field of the JWT payload, and
+    /// notably does not go into the VP body itself.
     /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip)]
     pub jwt_exp: Option<NumericDate>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1501,6 +1504,9 @@ impl Presentation {
             let uri = URI::try_from(id)?;
             vp.id = Some(uri);
         }
+        vp.jwt_iat = claims.issued_at;
+        vp.jwt_nbf = claims.not_before;
+        vp.jwt_exp = claims.expiration_time;
         Ok(vp)
     }
 
