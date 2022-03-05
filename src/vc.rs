@@ -306,6 +306,14 @@ pub struct Presentation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub holder: Option<URI>,
 
+    /// If decoding a Presentation from a JWT, this is the "aud" field of the JWT payload.  It is
+    /// ignored when producing the JWT, since it comes from LinkedDataProofOptions' domain field.
+    #[serde(skip)]
+    pub jwt_aud: Option<OneOrMany<StringOrURI>>,
+    /// If decoding a Presentation from a JWT, this is the "nonce" field of the JWT payload.  It is
+    /// ignored when producing the JWT, since it comes from LinkedDataProofOptions' challenge field.
+    #[serde(skip)]
+    pub jwt_nonce: Option<String>,
     /// If producing a JWT from Presentation, this sets the "iat" field of the JWT payload, and
     /// notably does not go into the VP body itself.
     /// NOTE: This is a non-normative attribute; for discussion, see https://github.com/spruceid/ssi/issues/387
@@ -1504,6 +1512,8 @@ impl Presentation {
             let uri = URI::try_from(id)?;
             vp.id = Some(uri);
         }
+        vp.jwt_aud = claims.audience;
+        vp.jwt_nonce = claims.nonce;
         vp.jwt_iat = claims.issued_at;
         vp.jwt_nbf = claims.not_before;
         vp.jwt_exp = claims.expiration_time;
@@ -1517,6 +1527,7 @@ impl Presentation {
         let id = self.id.clone();
         let holder = self.holder.clone();
         let vp = self.clone();
+        // Note that "aud" and "nonce" fields are set via LinkedDataProofOptions.
         Ok(JWTClaims {
             issuer: holder.map(|id| id.into()),
             jwt_id: id.map(|id| id.into()),
@@ -1935,6 +1946,8 @@ impl Default for Presentation {
             id: None,
             proof: None,
             holder: None,
+            jwt_aud: None,
+            jwt_nonce: None,
             jwt_iat: None,
             jwt_nbf: None,
             jwt_exp: None,
