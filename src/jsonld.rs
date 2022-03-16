@@ -143,6 +143,8 @@ pub const OPEN_CREDENTIALING_INITIATIVE_V1_CONTEXT: &str = "https://open-credent
 pub const VC_STATUS_2021_LDAP_V1_CONTEXT: &str = "https://spherity.github.io/vc-status-2021-ldap/contexts/vc-status-2021-ldap/v1.jsonld";
 pub const OCI_IDENTITY_CREDENTIAL_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/schemas/credentials/IdentityCredential-v1.0.0.jsonld";
 pub const OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT: &str = "https://open-credentialing-initiative.github.io/schemas/credentials/DSCSAATPCredential-v1.0.0.jsonld";
+pub const EMAIL_CREDENTIAL_V1_CONTEXT: &str = "https://dev.vc.zoogma.ledgerdomain.com/context/EmailCredential-v1.0.jsonld";
+pub const TELEPHONE_CREDENTIAL_V1_CONTEXT: &str = "https://dev.vc.zoogma.ledgerdomain.com/context/TelephoneCredential-v1.0.jsonld";
 
 lazy_static! {
     pub static ref CREDENTIALS_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
@@ -307,6 +309,18 @@ lazy_static! {
         let iri = Iri::new(OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT).unwrap();
         RemoteDocument::new(doc, iri)
     };
+    pub static ref EMAIL_CREDENTIAL_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::EMAIL_CREDENTIAL_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(EMAIL_CREDENTIAL_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
+    pub static ref TELEPHONE_CREDENTIAL_V1_CONTEXT_DOCUMENT: RemoteDocument<JsonValue> = {
+        let jsonld = ssi_contexts::TELEPHONE_CREDENTIAL_V1;
+        let doc = json::parse(jsonld).unwrap();
+        let iri = Iri::new(TELEPHONE_CREDENTIAL_V1_CONTEXT).unwrap();
+        RemoteDocument::new(doc, iri)
+    };
 }
 
 pub struct StaticLoader;
@@ -362,6 +376,8 @@ impl Loader for StaticLoader {
                 OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT => {
                     Ok(OCI_DSCSA_ATP_CREDENTIAL_V1_CONTEXT_DOCUMENT.clone())
                 }
+                EMAIL_CREDENTIAL_V1_CONTEXT => Ok(EMAIL_CREDENTIAL_V1_CONTEXT_DOCUMENT.clone()),
+                TELEPHONE_CREDENTIAL_V1_CONTEXT => Ok(TELEPHONE_CREDENTIAL_V1_CONTEXT_DOCUMENT.clone()),
                 _ => {
                     eprintln!("unknown context {}", url);
                     Err(json_ld::ErrorCode::LoadingDocumentFailed.into())
