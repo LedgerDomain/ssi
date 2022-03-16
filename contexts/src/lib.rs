@@ -51,6 +51,10 @@ pub const VC_STATUS_2021_LDAP_V1: &str = include_str!("../vc-status-2021-ladp-v1
 pub const OCI_IDENTITY_CREDENTIAL_V1: &str = include_str!("../IdentityCredential-v1.0.0.jsonld");
 /// <https://open-credentialing-initiative.github.io/schemas/credentials/DSCSAATPCredential-v1.0.0.jsonld>
 pub const OCI_DSCSA_ATP_CREDENTIAL_V1: &str = include_str!("../DSCSAATPCredential-v1.0.0.jsonld");
+/// <https://dev.vc.zoogma.ledgerdomain.com/context/EmailCredential-v1.0.jsonld>
+pub const EMAIL_CREDENTIAL_V1: &str = include_str!("../EmailCredential-v1.0.jsonld");
+/// <https://dev.vc.zoogma.ledgerdomain.com/context/TelephoneCredential-v1.0.jsonld>
+pub const TELEPHONE_CREDENTIAL_V1: &str = include_str!("../TelephoneCredential-v1.0.jsonld");
 
 pub const TZ_V2: &str = include_str!("../tz-2021-v2.jsonld");
 pub const TZVM_V1: &str = include_str!("../tzvm-2021-v1.jsonld");
