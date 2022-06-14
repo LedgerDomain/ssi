@@ -16,6 +16,7 @@ use crate::did_resolve::{dereference, Content, DIDResolver, DereferencingInputMe
 #[cfg(feature = "keccak-hash")]
 use crate::eip712::TypedData;
 use crate::error::Error;
+#[cfg(any(feature = "ring", feature = "sha2"))]
 use crate::hash::sha256;
 use crate::jsonld::ContextLoader;
 use crate::jwk::Base64urlUInt;

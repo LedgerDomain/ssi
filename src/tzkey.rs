@@ -1,3 +1,5 @@
+#![allow(unreachable_code, unused_variables)]
+
 use crate::error::Error;
 use crate::jwk::{Algorithm, Base64urlUInt, OctetParams, Params, JWK};
 use core::convert::TryFrom;

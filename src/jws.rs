@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::error::Error;
 use crate::jwk::{Algorithm, Base64urlUInt, Params as JWKParams, JWK};
 #[cfg(any(feature = "k256", feature = "p256"))]
