@@ -51,6 +51,7 @@ simple_asn1 = "^0.5.2"
 num-bigint = "0.4"
 async-std = { version = "1.9", features = ["attributes"] }
 async-trait = "0.1"
+async-recursion = "1.0"
 json = "^0.12"
 futures = "0.3"
 iref = "^2.0.3"
@@ -79,7 +80,6 @@ sshkeys = "0.3"
 reqwest = { version = "0.11", features = ["json"] }
 flate2 = "1.0"
 bitvec = "0.20"
-clear_on_drop = "0.2.4"
 url = { version = "2.2", features = ["serde"] }
 anyhow = "1.0"
 rand_xorshift = "0.3"
@@ -89,11 +89,14 @@ snarkvm-algorithms = { version= "0.7.9", optional = true }
 snarkvm-curves = { version= "0.7.9", optional = true }
 snarkvm-utilities = { version = "0.7.9", optional = true }
 snarkvm-parameters = { version = "0.7.9", optional = true }
+serde_with = "1.14"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+clear_on_drop = "0.2.4"
 chrono = { version = "0.4", features = ["serde"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+clear_on_drop = { version = "0.2.4", features = ["no_cc"] }
 chrono = { version = "0.4", features = ["serde", "wasmbind"] }
 # https://docs.rs/getrandom/0.2.2/getrandom/#indirect-dependencies
 getrandom = { version = "0.2", features = ["js"] }
