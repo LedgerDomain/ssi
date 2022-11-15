@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use crate::did_resolve::DIDResolver;
 use crate::jsonld::{ContextLoader, REVOCATION_LIST_2020_V1_CONTEXT, STATUS_LIST_2021_V1_CONTEXT};
 use crate::one_or_many::OneOrMany;
