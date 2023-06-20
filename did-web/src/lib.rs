@@ -54,6 +54,26 @@ fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
     Ok(url)
 }
 
+lazy_static::lazy_static! {
+    /// Building a reqwest::Client is *incredibly* slow, so we use a global instance and then clone
+    /// it per use, as the documentation indicates.
+    pub static ref REQWEST_CLIENT: reqwest::Client = {
+        let mut headers = reqwest::header::HeaderMap::new();
+
+        headers.insert(
+            "User-Agent",
+            reqwest::header::HeaderValue::from_static(USER_AGENT),
+        );
+
+        let client = match reqwest::Client::builder().default_headers(headers).build() {
+            Ok(c) => c,
+            Err(err) => { panic!("Error building HTTP client: {}", err.to_string()) }
+        };
+
+        client
+    };
+}
+
 /// <https://w3c-ccg.github.io/did-method-web/#read-resolve>
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -102,26 +122,10 @@ impl DIDResolver for DIDWeb {
         };
         // TODO: https://w3c-ccg.github.io/did-method-web/#in-transit-security
 
-        let mut headers = reqwest::header::HeaderMap::new();
+        // Clone the pre-created reqwest::Client, because building one is *incredibly* slow.
+        // The reqwest documents state that this is the intended usage.
+        let client = REQWEST_CLIENT.clone();
 
-        headers.insert(
-            "User-Agent",
-            reqwest::header::HeaderValue::from_static(USER_AGENT),
-        );
-
-        let client = match reqwest::Client::builder().default_headers(headers).build() {
-            Ok(c) => c,
-            Err(err) => {
-                return (
-                    ResolutionMetadata::from_error(&format!(
-                        "Error building HTTP client: {}",
-                        err.to_string()
-                    )),
-                    Vec::new(),
-                    None,
-                )
-            }
-        };
         let accept = input_metadata
             .accept
             .clone()
@@ -323,7 +327,13 @@ mod tests {
 
         // test that issuer property is used for verification
         vc.issuer = Some(Issuer::URI(URI::String("did:example:bad".to_string())));
-        assert!(vc.verify(None, &DIDWeb, &mut context_loader).await.errors.len() > 0);
+        assert!(
+            vc.verify(None, &DIDWeb, &mut context_loader)
+                .await
+                .errors
+                .len()
+                > 0
+        );
 
         PROXY.with(|proxy| {
             proxy.replace(None);
