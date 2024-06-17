@@ -58,7 +58,7 @@ impl DIDWeb {
 fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
     let mut parts = did.split(':').peekable();
     let domain_name = match (parts.next(), parts.next(), parts.next()) {
-        (Some("did"), Some("web"), Some(domain_name)) => domain_name,
+        (Some("did"), Some("web"), Some(domain_name)) if !domain_name.is_empty() => domain_name,
         _ => {
             return Err(ResolutionMetadata::from_error(ERROR_INVALID_DID));
         }
@@ -72,12 +72,29 @@ fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
         Some(_) => parts.collect::<Vec<&str>>().join("/"),
         None => ".well-known".to_string(),
     };
-    // Use http for localhost, for testing purposes.
-    let proto = if domain_name.starts_with("localhost") {
+
+    // If the env var is set (it should be a comma-delimited sequence of hostnames for which the did:web resolution
+    // process should resolve to a "http://" URL instead of "https://" URL), then use it.  Otherwise, default to
+    // "localhost".
+    let force_http_for_hostnames_string = std::env::var("SSI__DID_WEB__FORCE_HTTP_FOR_HOSTNAMES")
+        .unwrap_or_else(|_| "localhost".to_string());
+    let force_http_for_hostnames = force_http_for_hostnames_string.split(',');
+
+    // Determine if http should be used, or https.
+    let proto = if force_http_for_hostnames
+        .into_iter()
+        .any(|force_http_for_hostname| {
+            domain_name
+                .split("%3A")
+                .next()
+                .expect("programmer error: domain_name should have been nonempty")
+                == force_http_for_hostname
+        }) {
         "http"
     } else {
         "https"
     };
+
     #[allow(unused_mut)]
     let mut url = format!(
         "{}://{}/{}/did.json",
