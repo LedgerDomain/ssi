@@ -76,7 +76,7 @@ fn did_web_url(did: &str) -> Result<String, ResolutionMetadata> {
     // If the env var is set (it should be a comma-delimited sequence of hostnames for which the did:web resolution
     // process should resolve to a "http://" URL instead of "https://" URL), then use it.  Otherwise, default to
     // "localhost".
-    let force_http_for_hostnames_string = std::env::var("SSI__DID_WEB__FORCE_HTTP_FOR_HOSTNAMES")
+    let force_http_for_hostnames_string = std::env::var("FORCE_HTTP_FOR_HOSTNAMES")
         .unwrap_or_else(|_| "localhost".to_string());
     let force_http_for_hostnames = force_http_for_hostnames_string.split(',');
 
