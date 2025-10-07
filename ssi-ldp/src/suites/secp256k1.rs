@@ -67,6 +67,11 @@ impl EcdsaSecp256k1RecoverySignature2020 {
         resolver: &dyn DIDResolver,
         context_loader: &mut ContextLoader,
     ) -> Result<VerificationWarnings, Error> {
+        log::trace!(
+            "EcdsaSecp256k1RecoverySignature2020::verify; proof: {:?}, context_loader: {:?}",
+            proof,
+            context_loader
+        );
         let jws = proof.jws.as_ref().ok_or(Error::MissingProofSignature)?;
         let verification_method = proof
             .verification_method
@@ -80,7 +85,16 @@ impl EcdsaSecp256k1RecoverySignature2020 {
             return Err(Error::VerificationMethodMismatch);
         }
         let message = to_jws_payload(document, proof, context_loader).await?;
-        let (_header, jwk) = ssi_jws::detached_recover(jws, &message)?;
+        log::trace!(
+            "EcdsaSecp256k1RecoverySignature2020::verify; message: {:?}",
+            message
+        );
+        let (header, jwk) = ssi_jws::detached_recover(jws, &message)?;
+        log::trace!(
+            "EcdsaSecp256k1RecoverySignature2020::verify; header: {:?}, jwk: {:?}",
+            header,
+            jwk
+        );
         let mut warnings = VerificationWarnings::default();
         if let Err(_e) = vm.match_jwk(&jwk) {
             // Legacy mode: allow using Keccak-256 instead of SHA-256

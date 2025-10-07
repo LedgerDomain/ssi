@@ -882,6 +882,7 @@ impl VerificationMethodMap {
             },
             None => None,
         };
+        log::trace!("VerificationMethodMap::get_jwk; self.public_key_jwk: {:?}, self.public_key_base58: {:?}, pk_hex_value: {:?}, pk_multibase_opt: {:?}; NOTE that self.blockchain_account_id: {:?}", self.public_key_jwk, self.public_key_base58, pk_hex_value, pk_multibase_opt, self.blockchain_account_id);
         let pk_bytes = match (
             self.public_key_jwk.as_ref(),
             self.public_key_base58.as_ref(),
@@ -899,7 +900,10 @@ impl VerificationMethodMap {
                 hex::decode(pk_hex)?
             }
             (None, None, None, Some(pk_mb)) => multibase::decode(pk_mb)?.1,
-            (None, None, None, None) => return Err(Error::MissingKey),
+            (None, None, None, None) => {
+                log::error!("VerificationMethodMap::get_jwk; None, None, None, None -> MissingKey; self: {:?}", self);
+                return Err(Error::MissingKey);
+            }
             _ => {
                 // https://w3c.github.io/did-core/#verification-material
                 // "expressing key material in a verification method using both publicKeyJwk and
@@ -907,17 +911,34 @@ impl VerificationMethodMap {
                 return Err(Error::MultipleKeyMaterial);
             }
         };
-        Ok(ssi_jwk::JWK::from_vm_type(&self.type_, pk_bytes)?)
+        let retval = ssi_jwk::JWK::from_vm_type(&self.type_, pk_bytes)?;
+        log::trace!("VerificationMethodMap::get_jwk; retval: {:?}", retval);
+        Ok(retval)
     }
 
     /// Verify that a given JWK can be used to satisfy this verification method.
     pub fn match_jwk(&self, jwk: &JWK) -> Result<(), Error> {
+        log::trace!(
+            "VerificationMethodMap::match_jwk; self.blockchain_account_id: {:?}, jwk: {:?}",
+            self.blockchain_account_id,
+            jwk
+        );
         if let Some(ref account_id) = self.blockchain_account_id {
+            log::trace!(
+                "VerificationMethodMap::match_jwk; account_id: {:?}",
+                account_id
+            );
             let account_id = BlockchainAccountId::from_str(account_id)?;
             account_id.verify(jwk)?;
         } else {
+            log::trace!("VerificationMethodMap::match_jwk; no account_id; trying self.get_jwk()");
             let resolved_jwk = self.get_jwk()?;
             if !resolved_jwk.equals_public(jwk) {
+                log::trace!(
+                    "VerificationMethodMap::match_jwk; KeyMismatch; resolved_jwk: {:?}, jwk: {:?}",
+                    resolved_jwk,
+                    jwk
+                );
                 return Err(Error::KeyMismatch);
             }
         }
@@ -1464,7 +1485,7 @@ mod tests {
     fn new_document() {
         let id = "did:test:deadbeefcafe";
         let doc = Document::new(id);
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
         assert_eq!(doc.id, id);
     }
 
@@ -1475,7 +1496,7 @@ mod tests {
             .id(id.to_owned())
             .build()
             .unwrap();
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
         assert_eq!(doc.id, id);
     }
 
@@ -1483,7 +1504,7 @@ mod tests {
     #[should_panic(expected = "Missing document ID")]
     fn build_document_no_id() {
         let doc = DocumentBuilder::default().build().unwrap();
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
     }
 
     #[test]
@@ -1495,7 +1516,7 @@ mod tests {
             .id(id)
             .build()
             .unwrap();
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
     }
 
     #[test]
@@ -1506,7 +1527,7 @@ mod tests {
         }";
         let id = "did:test:deadbeefcafe";
         let doc = Document::from_json(doc_str).unwrap();
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
         assert_eq!(doc.id, id);
     }
 
@@ -1517,7 +1538,7 @@ mod tests {
         doc.verification_method = Some(vec![VerificationMethod::DIDURL(
             DIDURL::try_from("did:pubkey:okay".to_string()).unwrap(),
         )]);
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
         let pko = VerificationMethodMap {
             id: String::from("did:example:123456789abcdefghi#keys-1"),
             type_: String::from("Ed25519VerificationKey2018"),
@@ -1528,7 +1549,7 @@ mod tests {
             VerificationMethod::DIDURL(DIDURL::try_from("did:pubkey:okay".to_string()).unwrap()),
             VerificationMethod::Map(pko),
         ]);
-        println!("{}", serde_json::to_string_pretty(&doc).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&doc).unwrap());
         assert_eq!(doc.id, id);
     }
 

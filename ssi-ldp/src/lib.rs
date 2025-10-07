@@ -291,11 +291,21 @@ async fn ensure_verification_relationship(
     jwk: &JWK,
     resolver: &dyn DIDResolver,
 ) -> Result<(), Error> {
+    log::trace!("ssi_ldp::ensure_verification_relationship; issuer: {:?}, proof_purpose: {:?}, vm: {:?}, jwk: {:?}", issuer, proof_purpose, vm, jwk);
     let vmms =
         ssi_dids::did_resolve::get_verification_methods(issuer, proof_purpose.clone(), resolver)
             .await?;
     let vmm = vmms.get(vm).ok_or_else(|| {
-        Error::MissingVerificationRelationship(issuer.to_string(), proof_purpose, vm.to_string())
+        let e = Error::MissingVerificationRelationship(
+            issuer.to_string(),
+            proof_purpose,
+            vm.to_string(),
+        );
+        log::error!(
+            "ssi_ldp::ensure_verification_relationship; missing verification relationship: {:?}",
+            e
+        );
+        e
     })?;
     vmm.match_jwk(jwk)?;
     Ok(())
@@ -307,9 +317,16 @@ async fn pick_default_vm(
     jwk: &JWK,
     resolver: &dyn DIDResolver,
 ) -> Result<String, Error> {
+    log::trace!(
+        "ssi_ldp::pick_default_vm; issuer: {:?}, proof_purpose: {:?}, jwk: {:?}",
+        issuer,
+        proof_purpose,
+        jwk
+    );
     let vm_ids =
         ssi_dids::did_resolve::get_verification_methods(issuer, proof_purpose.clone(), resolver)
             .await?;
+    log::trace!("ssi_ldp::pick_default_vm; vm_ids: {:?}", vm_ids);
     let mut err = Error::MissingKey;
     for (vm_id, vmm) in vm_ids {
         // Try to find a VM that matches this JWK and controller.
@@ -318,7 +335,10 @@ async fn pick_default_vm(
                 // Found appropriate VM.
                 return Ok(vm_id);
             }
-            Err(e) => err = e.into(),
+            Err(e) => {
+                log::error!("ssi_ldp::pick_default_vm; error matching VM: {:?}", e);
+                err = e.into();
+            }
         }
     }
     // No matching VM found. Return any error encountered.

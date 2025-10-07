@@ -110,6 +110,11 @@ impl BlockchainAccountId {
     /// - `bip122:000000000019d6689c085ae165831e93:1*` (requires `ripemd160` crate feature)
     /// - `bip122:1a91e3dace36e2be3bf030a65679fe82:D*` (requires `ripemd160` crate feature)
     pub fn verify(&self, jwk: &JWK) -> Result<(), BlockchainAccountIdVerifyError> {
+        log::trace!(
+            "BlockchainAccountId::verify; self: {:?}, jwk: {:?}",
+            self,
+            jwk
+        );
         let hash = match (
             self.chain_id.namespace.as_str(),
             self.chain_id.reference.as_str(),

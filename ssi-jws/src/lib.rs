@@ -661,6 +661,11 @@ pub fn detached_verify(jws: &str, payload_enc: &[u8], key: &JWK) -> Result<Heade
 
 /// Recover a JWK from a JWS and payload, if the algorithm supports that (such as [ES256K-R](https://github.com/decentralized-identity/EcdsaSecp256k1RecoverySignature2020#es256k-r)).
 pub fn detached_recover(jws: &str, payload_enc: &[u8]) -> Result<(Header, JWK), Error> {
+    log::trace!(
+        "ssi_jws::detached_recover; jws: {:?}, payload_enc: {:?}",
+        jws,
+        payload_enc
+    );
     let (header_b64, signature_b64) = split_detached_jws(jws)?;
     let DecodedJWS {
         header,
@@ -669,6 +674,11 @@ pub fn detached_recover(jws: &str, payload_enc: &[u8]) -> Result<(Header, JWK), 
         signature,
     } = decode_jws_parts(header_b64, payload_enc, signature_b64)?;
     let key = recover(header.algorithm, &signing_input, &signature)?;
+    log::trace!(
+        "ssi_jws::detached_recover; succeeded; header: {:?}, key: {:?}",
+        header,
+        key
+    );
     Ok((header, key))
 }
 

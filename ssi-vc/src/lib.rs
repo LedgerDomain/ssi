@@ -811,6 +811,7 @@ impl Credential {
                 );
             }
         };
+        log::trace!("Credential::decode_verify_jwt; header: {:?}, signing_input: {:?}, payload: {:?}, signature: {:?}", header, signing_input, payload, signature);
         let claims: JWTClaims = match serde_json::from_slice(&payload) {
             Ok(claims) => claims,
             Err(err) => {
@@ -917,13 +918,10 @@ impl Credential {
                     let key = match vmm.get_jwk() {
                         Ok(key) => key,
                         Err(err) => {
-                            return (
-                                None,
-                                VerificationResult::error(&format!(
-                                    "failed to get JWK from verification method {}; {}",
-                                    vmm_id, err
-                                )),
-                            );
+                            log::trace!("Credential::decode_verify_jwt; failed to get JWK from verification method {}; vmm: {:?}, error was {}; this may be expected behavior in some cases", vmm_id, vmm, err);
+                            // Don't return with error here, because some verification methods won't have a JWK
+                            // in particular, ES256K-R (where the key is recovered from the signature).
+                            continue;
                         }
                     };
                     keys.push(key);
@@ -1461,6 +1459,7 @@ impl Presentation {
                 );
             }
         };
+        log::trace!("Presentation::decode_verify_jwt; header: {:?}, signing_input: {:?}, payload: {:?}, signature: {:?}", header, signing_input, payload, signature);
         let claims: JWTClaims = match serde_json::from_slice(&payload) {
             Ok(claims) => claims,
             Err(err) => {
@@ -1490,6 +1489,11 @@ impl Presentation {
         }
         // TODO: error if any unconvertable claims
         // TODO: unify with verify function?
+        log::trace!(
+            "Presentation::decode_verify_jwt; vp: {:?}, options_opt: {:?}",
+            vp,
+            options_opt
+        );
         let (proofs, matched_jwt) = match vp
             .filter_proofs(options_opt.clone(), Some((&header, &claims)), resolver)
             .await
@@ -1502,9 +1506,15 @@ impl Presentation {
                 );
             }
         };
+        log::trace!(
+            "Presentation::decode_verify_jwt; proofs: {:?}, matched_jwt: {:?}",
+            proofs,
+            matched_jwt
+        );
         let keys = match header.key_id {
             // If "kid" field is specified, use that (original behavior of ssi)
             Some(kid) => {
+                log::trace!("Presentation::decode_verify_jwt; kid: {:?}", kid);
                 let key = match ssi_dids::did_resolve::resolve_key(&kid, resolver).await {
                     Ok(key) => key,
                     Err(err) => {
@@ -1517,6 +1527,7 @@ impl Presentation {
                         );
                     }
                 };
+                log::trace!("Presentation::decode_verify_jwt; key: {:?}", key);
                 vec![key]
             }
             // Otherwise, retrieve all keys from the DID document (ugh -- this is apparently required
@@ -1528,6 +1539,7 @@ impl Presentation {
             //      the kid can refer to a key in a DID document, or can be the identifier of a
             //      key inside a JWKS.
             None => {
+                log::trace!("Presentation::decode_verify_jwt; no kid; trying to get all keys from the DID document");
                 let proof_purpose = match options_opt.map(|options| options.proof_purpose) {
                     Some(Some(proof_purpose)) => proof_purpose,
                     Some(None) | None => ProofPurpose::Authentication,
@@ -1540,7 +1552,7 @@ impl Presentation {
                         return (None, VerificationResult::error("\"iss\" field missing"));
                     }
                 };
-                //                 println!("Presentation::decode_verify_jwt; issuer: {:?}", issuer);
+                log::trace!("Presentation::decode_verify_jwt; issuer: {:?}", issuer);
                 // Resolve the DID document of the issuer and get all verification methods.
                 let vmms = match ssi_dids::did_resolve::get_verification_methods(
                     &issuer,
@@ -1560,19 +1572,24 @@ impl Presentation {
                         );
                     }
                 };
-                //                 println!("Presentation::decode_verify_jwt; vmms: {:?}", vmms);
+                log::trace!("Presentation::decode_verify_jwt; vmms: {:?}", vmms);
                 let mut keys = Vec::new();
                 for (vmm_id, vmm) in vmms {
+                    log::trace!(
+                        "Presentation::decode_verify_jwt; vmm_id: {:?}, vmm: {:?}",
+                        vmm_id,
+                        vmm
+                    );
                     let key = match vmm.get_jwk() {
-                        Ok(key) => key,
+                        Ok(key) => {
+                            log::trace!("Presentation::decode_verify_jwt; got JWK from verification method {:?}; key: {:?}", vmm_id, key);
+                            key
+                        }
                         Err(err) => {
-                            return (
-                                None,
-                                VerificationResult::error(&format!(
-                                    "failed to get JWK from verification method {}; {}",
-                                    vmm_id, err
-                                )),
-                            );
+                            log::trace!("Presentation::decode_verify_jwt; failed to get JWK from verification method {}; vmm: {:?}, error was {}; this may be expected behavior in some cases", vmm_id, vmm, err);
+                            // Don't return with error here, because some verification methods won't have a JWK
+                            // in particular, ES256K-R (where the key is recovered from the signature).
+                            continue;
                         }
                     };
                     keys.push(key);
@@ -1746,6 +1763,7 @@ impl Presentation {
             .iter()
             .flatten()
             .filter(|proof| {
+                log::trace!("Presentation::filter_proofs; proof: {:?}, options: {:?}, restrict_allowed_vms: {:?}", proof, options, restrict_allowed_vms);
                 proof.matches_options(&options)
                     && if let Some(ref allowed_vms) = restrict_allowed_vms {
                         proof.matches_vms(allowed_vms)

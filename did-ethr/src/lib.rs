@@ -19,12 +19,18 @@ use ssi_dids::{
 pub struct DIDEthr;
 
 fn parse_did(did: &str) -> Option<(i64, String)> {
+    log::trace!("did_ethr::parse_did; did: {}", did);
     // https://github.com/decentralized-identity/ethr-did-resolver/blob/master/doc/did-method-spec.md#method-specific-identifier
     let (network, addr_or_pk) = match did.split(':').collect::<Vec<&str>>().as_slice() {
         ["did", "ethr", addr_or_pk] => ("mainnet".to_string(), addr_or_pk.to_string()),
         ["did", "ethr", network, addr_or_pk] => (network.to_string(), addr_or_pk.to_string()),
         _ => return None,
     };
+    log::trace!(
+        "did_ethr::parse_did; network: {}, addr_or_pk: {}",
+        network,
+        addr_or_pk
+    );
     let network_chain_id = match &network[..] {
         "mainnet" => 1,
         "morden" => 2,
@@ -55,6 +61,12 @@ fn resolve_pk(
     Option<Document>,
     Option<DocumentMetadata>,
 ) {
+    log::trace!(
+        "did_ethr::resolve_pk; did: {}, chain_id: {}, public_key_hex: {}",
+        did,
+        chain_id,
+        public_key_hex
+    );
     let mut context = BTreeMap::new();
     context.insert(
         "blockchainAccountId".to_string(),
@@ -76,6 +88,10 @@ fn resolve_pk(
         }),
     );
     if !public_key_hex.starts_with("0x") {
+        log::error!(
+            "did_ethr::resolve_pk; public_key_hex does not start with 0x: {}",
+            public_key_hex
+        );
         return (
             ResolutionMetadata::from_error(ERROR_INVALID_DID),
             None,
@@ -85,17 +101,22 @@ fn resolve_pk(
     let pk_bytes = match hex::decode(&public_key_hex[2..]) {
         Ok(pk_bytes) => pk_bytes,
         Err(_) => {
+            log::error!(
+                "did_ethr::resolve_pk; unable to decode public_key_hex: {}",
+                public_key_hex
+            );
             return (
                 ResolutionMetadata::from_error(ERROR_INVALID_DID),
                 None,
                 None,
-            )
+            );
         }
     };
 
     let pk_jwk = match ssi_jwk::secp256k1_parse(&pk_bytes) {
         Ok(pk_bytes) => pk_bytes,
         Err(e) => {
+            log::error!("did_ethr::resolve_pk; unable to parse key: {}", e);
             return (
                 ResolutionMetadata::from_error(&format!("Unable to parse key: {}", e)),
                 None,
@@ -106,11 +127,15 @@ fn resolve_pk(
     let account_address = match ssi_jwk::eip155::hash_public_key_eip55(&pk_jwk) {
         Ok(hash) => hash,
         Err(e) => {
+            log::error!(
+                "did_ethr::resolve_pk; unable to hash account address: {}",
+                e
+            );
             return (
                 ResolutionMetadata::from_error(&format!("Unable to hash account address: {}", e)),
                 None,
                 None,
-            )
+            );
         }
     };
     let blockchain_account_id = BlockchainAccountId {
@@ -170,6 +195,12 @@ fn resolve_pk(
     let doc_meta = DocumentMetadata {
         ..Default::default()
     };
+    log::trace!(
+        "did_ethr::resolve_pk; RESOLVED: res_meta: {:?}, doc_meta: {:?}, doc (as json): {}",
+        res_meta,
+        doc_meta,
+        serde_json::to_string_pretty(&doc).unwrap()
+    );
     (res_meta, Some(doc), Some(doc_meta))
 }
 
@@ -185,14 +216,19 @@ impl DIDResolver for DIDEthr {
         Option<Document>,
         Option<DocumentMetadata>,
     ) {
+        log::trace!("DIDEthr::resolve; did: {}", did);
         let (chain_id, addr_or_pk) = match parse_did(did) {
-            Some(parsed) => parsed,
+            Some(parsed) => {
+                log::trace!("DIDEthr::resolve; did {} -> parsed: {:?}", did, parsed);
+                parsed
+            }
             None => {
+                log::trace!("DIDEthr::resolve; did {} -> ERROR_INVALID_DID", did);
                 return (
                     ResolutionMetadata::from_error(ERROR_INVALID_DID),
                     None,
                     None,
-                )
+                );
             }
         };
         let account_address = match addr_or_pk.len() {
@@ -206,6 +242,11 @@ impl DIDResolver for DIDEthr {
                 )
             }
         };
+        log::trace!(
+            "DIDEthr::resolve; did {} -> account_address: {}",
+            did,
+            account_address
+        );
 
         let mut context = BTreeMap::new();
         context.insert(
@@ -280,6 +321,13 @@ impl DIDResolver for DIDEthr {
             ..Default::default()
         };
 
+        log::trace!(
+            "DIDEthr::resolve; did {} RESOLVED: res_meta: {:?}, doc_meta: {:?}, doc (as json): {}",
+            did,
+            res_meta,
+            doc_meta,
+            serde_json::to_string_pretty(&doc).unwrap()
+        );
         (res_meta, Some(doc), Some(doc_meta))
     }
 
@@ -453,11 +501,11 @@ mod tests {
             .generate_proof(&key, &issue_options, &DIDEthr, &mut context_loader)
             .await
             .unwrap();
-        println!("{}", serde_json::to_string_pretty(&proof).unwrap());
+        log::trace!("{}", serde_json::to_string_pretty(&proof).unwrap());
         vc.add_proof(proof);
         vc.validate().unwrap();
         let verification_result = vc.verify(None, &DIDEthr, &mut context_loader).await;
-        println!("{:#?}", verification_result);
+        log::trace!("{:#?}", verification_result);
         assert!(verification_result.errors.is_empty());
 
         // test that issuer property is used for verification
@@ -516,7 +564,7 @@ mod tests {
             .await
             .unwrap();
         vp.add_proof(vp_proof);
-        println!("VP: {}", serde_json::to_string_pretty(&vp).unwrap());
+        log::trace!("VP: {}", serde_json::to_string_pretty(&vp).unwrap());
         vp.validate().unwrap();
         let vp_verification_result = vp
             .verify(
@@ -525,7 +573,7 @@ mod tests {
                 &mut context_loader,
             )
             .await;
-        println!("{:#?}", vp_verification_result);
+        log::trace!("{:#?}", vp_verification_result);
         assert!(vp_verification_result.errors.is_empty());
 
         // mess with the VP proof to make verify fail
@@ -542,7 +590,7 @@ mod tests {
         let vp_verification_result = vp1
             .verify(Some(vp_issue_options), &DIDEthr, &mut context_loader)
             .await;
-        println!("{:#?}", vp_verification_result);
+        log::trace!("{:#?}", vp_verification_result);
         assert!(!vp_verification_result.errors.is_empty());
 
         // test that holder is verified
@@ -562,7 +610,7 @@ mod tests {
         eprintln!("vc {:?}", vc);
         let mut context_loader = ssi_json_ld::ContextLoader::default();
         let verification_result = vc.verify(None, &DIDEthr, &mut context_loader).await;
-        println!("{:#?}", verification_result);
+        log::trace!("{:#?}", verification_result);
         assert!(verification_result.errors.is_empty());
     }
 }

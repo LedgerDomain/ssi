@@ -68,6 +68,13 @@ impl Eip712Signature2021 {
         resolver: &dyn DIDResolver,
         context_loader: &mut ContextLoader,
     ) -> Result<VerificationWarnings, Error> {
+        log::trace!(
+            "eip712::verify; proof: {:?}, document: {:?}, resolver: {:?}, context_loader: {:?}",
+            proof,
+            document,
+            resolver,
+            context_loader
+        );
         let sig_hex = proof
             .proof_value
             .as_ref()
@@ -190,6 +197,12 @@ impl EthereumEip712Signature2021 {
         document: &(dyn LinkedDataDocument + Sync),
         resolver: &dyn DIDResolver,
     ) -> Result<VerificationWarnings, Error> {
+        log::trace!(
+            "eip712::verify; proof: {:?}, document: {:?}, resolver: {:?}",
+            proof,
+            document,
+            resolver
+        );
         let sig_hex = proof
             .proof_value
             .as_ref()
@@ -301,6 +314,13 @@ impl EthereumPersonalSignature2021 {
         resolver: &dyn DIDResolver,
         context_loader: &mut ContextLoader,
     ) -> Result<VerificationWarnings, Error> {
+        log::trace!(
+            "eip712::verify; proof: {:?}, document: {:?}, resolver: {:?}, context_loader: {:?}",
+            proof,
+            document,
+            resolver,
+            context_loader
+        );
         let sig_hex = proof
             .proof_value
             .as_ref()
