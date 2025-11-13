@@ -48,6 +48,8 @@ impl AnySuite {
 
                     None
                 }
+                #[cfg(feature = "webplus")]
+                Some(vm) if vm.id().starts_with("did:webplus:") => Some(Self::JsonWebSignature2020),
                 #[cfg(all(feature = "w3c", feature = "ed25519"))]
                 _ => Some(Self::Ed25519Signature2018),
                 #[cfg(not(all(feature = "w3c", feature = "ed25519")))]

@@ -96,6 +96,9 @@ ethereum = ["ssi-data-integrity-suites/ethereum"]
 ## BBS cryptographic suites.
 bbs = ["ssi-bbs", "ssi-data-integrity-suites/bbs"]
 
+## Enables `did:webplus` signature suites.
+webplus = ["w3c"]
+
 [dependencies]
 ssi-data-integrity-core.workspace = true
 ssi-data-integrity-suites.workspace = true

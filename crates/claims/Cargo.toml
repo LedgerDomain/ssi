@@ -84,6 +84,9 @@ ethereum = ["ssi-jws/eip", "ssi-data-integrity/ethereum"]
 # Enables `Bbs2023`
 bbs = ["ssi-data-integrity/bbs"]
 
+# Enables `did:webplus` signature suites.
+webplus = ["ssi-data-integrity/webplus"]
+
 [dependencies]
 ssi-core.workspace = true
 ssi-crypto.workspace = true
