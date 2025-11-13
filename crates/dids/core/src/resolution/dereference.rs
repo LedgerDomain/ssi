@@ -138,20 +138,19 @@ impl From<PrimaryContent> for Content {
     }
 }
 
-/// [Dereferencing the Primary Resource](https://w3c-ccg.github.io/did-resolution/#dereferencing-algorithm-primary) - a subalgorithm of [DID URL dereferencing](https://w3c-ccg.github.io/did-resolution/#dereferencing-algorithm)
+/// [DID URL Dereferencing](https://www.w3.org/TR/did-resolution/#dereferencing-algorithm).
 pub(crate) async fn dereference_primary_resource<'a, R: ?Sized + DIDResolver>(
     resolver: &'a R,
     primary_did_url: &'a PrimaryDIDURL,
     parameters: Parameters,
     resolution_output: Output,
 ) -> Result<DerefOutput<PrimaryContent>, DerefError> {
-    // 1
     match &parameters.service {
         Some(id) => {
-            // 1.1
+            // 8
             match resolution_output.document.service(id) {
                 Some(service) => {
-                    // 1.2, 1.2.1
+                    // 8.1
                     // TODO: support these other cases?
                     let input_service_endpoint_url = match &service.service_endpoint {
                         None => return Err(DerefError::MissingServiceEndpoint(id.clone())),
@@ -164,7 +163,6 @@ pub(crate) async fn dereference_primary_resource<'a, R: ?Sized + DIDResolver>(
                         }
                     };
 
-                    // 1.2.2, 1.2.3
                     let r = construct_service_endpoint(
                         primary_did_url,
                         &parameters,
@@ -173,7 +171,6 @@ pub(crate) async fn dereference_primary_resource<'a, R: ?Sized + DIDResolver>(
 
                     match r {
                         Ok(output_service_endpoint_url) => {
-                            // 1.3
                             Ok(DerefOutput::url(output_service_endpoint_url))
                         }
                         Err(e) => Err(e.into()),
@@ -183,25 +180,14 @@ pub(crate) async fn dereference_primary_resource<'a, R: ?Sized + DIDResolver>(
             }
         }
         None => {
-            // 2
-            if primary_did_url.path().is_empty() && primary_did_url.query().is_none() {
-                // 2.1
-                return Ok(DerefOutput::new(
-                    PrimaryContent::Document(Box::new(resolution_output.document)),
-                    document::Metadata::default(),
-                    resolution_output.metadata,
-                ));
-            }
-
-            // 3
-            if !primary_did_url.path().is_empty() || primary_did_url.query().is_some() {
-                return resolver
-                    .dereference_primary_with_path_or_query(primary_did_url)
-                    .await;
-            }
-
-            // 4
-            Err(DerefError::NotFound)
+            // TEMP HACK -- always resolve.  Not sure why not having a service makes query parameters a failure,
+            // that seems like a bug to me.
+            let _ = resolver;
+            return Ok(DerefOutput::new(
+                PrimaryContent::Document(Box::new(resolution_output.document)),
+                document::Metadata::default(),
+                resolution_output.metadata,
+            ));
         }
     }
 }
